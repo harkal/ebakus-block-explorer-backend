@@ -8,7 +8,7 @@ import (
 func main() {
 	log.Print("Starting...")
 
-	ipc, err := ipc.NewIPCInterface("~/ebakus/ebakus.ipc")
+	ipc, err := ipc.NewIPCInterface("/Users/harkal/ebakus/ebakus.ipc")
 	if err != nil {
 		log.Fatal("Failed to connect to ebakus", err)
 	}

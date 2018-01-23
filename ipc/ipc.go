@@ -13,7 +13,7 @@ type IPCInterface struct {
 }
 
 func NewIPCInterface(endpoint string) (*IPCInterface, error) {
-	cli, err := rpc.Dial("/Users/harkal/ebakus/ebakus.ipc")
+	cli, err := rpc.Dial(endpoint)
 	if err != nil {
 		return nil, err
 	}
