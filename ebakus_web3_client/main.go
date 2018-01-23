@@ -2,7 +2,6 @@ package main
 
 import (
 	"ebakus_server/web3_dao"
-	// "github.com/gorilla/mux"
 	"log"
 )
 

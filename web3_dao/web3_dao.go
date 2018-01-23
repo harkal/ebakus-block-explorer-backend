@@ -8,10 +8,10 @@ import (
 	"net/http"
 	"sync"
 
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/rpc"
-
-	"ebakus_server/models"
 )
 
 type ResponseBase struct {
@@ -93,17 +93,30 @@ func GetBlockNumber() (*big.Int, error) {
 	return v.ToInt(), nil
 }
 
-func GetBlock(number *big.Int) (*models.Block, error) {
-	var v map[string]interface{}
+type Block struct {
+	Number           hexutil.Uint64
+	TimeStamp        hexutil.Uint64
+	Hash             common.Hash
+	ParentHash       common.Hash
+	StateRoot        common.Hash
+	TransactionsRoot common.Hash
+	ReceiptsRoot     common.Hash
+	Size             hexutil.Uint64
+	GasUsed          hexutil.Uint64
+	GasLimit         hexutil.Uint64
+	Transactions     []common.Hash
+	LogsBloom        types.Bloom
+}
 
-	err := cli.Call(&v, "eth_getBlockByNumber", hexutil.EncodeBig(number), true)
+func GetBlock(number *big.Int) (*Block, error) {
+	var block Block
+
+	err := cli.Call(&block, "eth_getBlockByNumber", hexutil.EncodeBig(number), true)
 	if err != nil {
 		return nil, err
 	}
 
-	log.Println(v)
-
-	return nil, nil
+	return &block, nil
 }
 
 // func SyncDatabase() {
