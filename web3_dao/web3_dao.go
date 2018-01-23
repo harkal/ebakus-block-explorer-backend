@@ -100,7 +100,7 @@ type Block struct {
 func GetBlock(number *big.Int) (*Block, error) {
 	var block Block
 
-	err := cli.Call(&block, "eth_getBlockByNumber", hexutil.EncodeBig(number), true)
+	err := cli.Call(&block, "eth_getBlockByNumber", hexutil.EncodeBig(number), false)
 	if err != nil {
 		return nil, err
 	}
