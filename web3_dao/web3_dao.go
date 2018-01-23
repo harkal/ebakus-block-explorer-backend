@@ -153,8 +153,6 @@ func GetBlock(number *big.Int) (*models.Block, error) {
 	}
 
 	bl := models.NewBlockFromWeb3Map(v) 
-	log.Print(v)
-	log.Println(bl)
-	return nil, nil
-}
 
+	return bl, nil
+}
