@@ -1,13 +1,12 @@
 package web3_dao
 
 import (
+	"ebakus_server/models"
 	"fmt"
 	"log"
 	"math/big"
 
-	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/rpc"
 )
 
@@ -38,23 +37,8 @@ func GetBlockNumber() (*big.Int, error) {
 	return v.ToInt(), nil
 }
 
-type Block struct {
-	Number           hexutil.Uint64
-	TimeStamp        hexutil.Uint64
-	Hash             common.Hash
-	ParentHash       common.Hash
-	StateRoot        common.Hash
-	TransactionsRoot common.Hash
-	ReceiptsRoot     common.Hash
-	Size             hexutil.Uint64
-	GasUsed          hexutil.Uint64
-	GasLimit         hexutil.Uint64
-	Transactions     []common.Hash
-	LogsBloom        types.Bloom
-}
-
-func GetBlock(number *big.Int) (*Block, error) {
-	var block Block
+func GetBlock(number *big.Int) (*models.Block, error) {
+	var block models.Block
 
 	err := cli.Call(&block, "eth_getBlockByNumber", hexutil.EncodeBig(number), false)
 	if err != nil {
