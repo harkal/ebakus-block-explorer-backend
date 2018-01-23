@@ -1,19 +1,15 @@
 package web3_dao
 
 import (
-	"log"
-	"bytes"
 	"encoding/json"
-	"errors"
-	"io/ioutil"
+	"fmt"
+	"log"
 	"math/big"
 	"net/http"
-	// "net/rpc"
 	"sync"
 
-	// "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/kr/pretty"
+	"github.com/ethereum/go-ethereum/rpc"
 
 	"ebakus_server/models"
 )
@@ -59,116 +55,53 @@ type Request struct {
 	Params  []interface{} `json:"params"`
 }
 
-var cli *Client
+var cli *rpc.Client
 
 func init() {
-	cli = newClient("http://localhost:8545", nil)
+	fmt.Println("init()")
 
+	var err error
 	/*** Test with rpc ***/
-	// cl, err := rpc.Dial("unix", "/Users/pantelisgiazitsis/ebakus/ebakus.ipc")
-	// if err != nil {
-	// 	log.Fatal(err.Error())
-	// }
-
-	// params := new(Request)
-	// var rep hexutil.Big
-	// err = cl.Call("eth_blockNumber",params,&rep)
-	// if err != nil {
-	// 	log.Fatal(err.Error())
-	// }
-} 
+	cli, err = rpc.Dial("/Users/harkal/ebakus/ebakus.ipc")
+	if err != nil {
+		log.Fatal("Failed to Dial", err.Error())
+	}
+}
 
 func newClient(url string, httpClient *http.Client) *Client {
 	if httpClient == nil {
 		httpClient = http.DefaultClient
 	}
 
-	return &Client {
+	return &Client{
 		url:        url,
 		httpClient: httpClient,
 	}
 }
 
-func (c *Client) callMethod(v interface{}, method string, params ...interface{}) error {
-	c.idLock.Lock()
-
-	c.id++
-
-	req := Request{
-		JSONRPC: "2.0",
-		ID:      c.id,
-		Method:  method,
-		Params:  params,
-	}
-
-	c.idLock.Unlock()
-
-	pretty.Println(req)
-
-	payload, err := json.Marshal(req)
-	if err != nil {
-		return err
-	}
-
-	resp, err := c.httpClient.Post(c.url, "application/json", bytes.NewReader(payload))
-	if resp != nil {
-		defer resp.Body.Close()
-	}
-	if err != nil {
-		return err
-	}
-
-	body, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		return err
-	}
-
-	var parsed ResponseBase
-	err = json.Unmarshal(body, &parsed)
-	if err != nil {
-		return err
-	}
-
-	if parsed.Error != nil {
-		return parsed.Error
-	}
-
-	if req.ID != parsed.ID || parsed.JSONRPC != "2.0" {
-		return errors.New("Error: JSONRPC 2.0 Specification error")
-	}
-
-	pretty.Println(parsed)
-	println(string(parsed.Result))
-
-	return json.Unmarshal(parsed.Result, v)
-}
-
-// DAO API
-
-// 
-// Get the top block number 
+//
+// Get the top block number
 //
 func GetBlockNumber() (*big.Int, error) {
 	var v hexutil.Big
 
-	err := cli.callMethod(&v, "eth_blockNumber")
+	err := cli.Call(&v, "eth_blockNumber")
 	if err != nil {
 		return nil, err
 	}
 
-	log.Print("block number is ", v.ToInt())
 	return v.ToInt(), nil
 }
 
 func GetBlock(number *big.Int) (*models.Block, error) {
 	var v map[string]*json.RawMessage
-	
-	err := cli.callMethod(&v, "eth_getBlockByNumber",hexutil.EncodeBig(number), true)
+
+	err := cli.Call(&v, "eth_getBlockByNumber", hexutil.EncodeBig(number), true)
 	if err != nil {
 		return nil, err
 	}
 
-	bl := models.NewBlockFromWeb3Map(v) 
+	bl := models.NewBlockFromWeb3Map(v)
 
 	return bl, nil
 }
@@ -179,5 +112,4 @@ func GetBlock(number *big.Int) (*models.Block, error) {
 // 		log.Fatal(err.Error())
 // 	}
 
-	
 // }

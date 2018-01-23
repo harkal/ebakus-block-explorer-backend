@@ -1,15 +1,18 @@
 package main
 
 import (
-	_ "ebakus_server/web3_dao"
 	"ebakus_server/web3_dao"
 	// "github.com/gorilla/mux"
 	"log"
-	"math/big"
 )
 
 func main() {
 	log.Print("Starting...")
-	// TEST
-	web3_dao.GetBlock(big.NewInt(2000))
+
+	number, err := web3_dao.GetBlockNumber()
+	if err != nil {
+		log.Fatal("Failed to get last block number")
+	}
+
+	log.Println(number)
 }
