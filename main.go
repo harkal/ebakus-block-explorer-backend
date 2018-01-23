@@ -1,7 +1,7 @@
 package main
 
 import (
-	"ebakus_server/web3_dao"
+	"ebakus_server/ipc"
 	"log"
 )
 
