@@ -15,4 +15,11 @@ func main() {
 	}
 
 	log.Println(number)
+
+	block, err := web3_dao.GetBlock(number)
+	if err != nil {
+		log.Fatal("Failed to get last block number")
+	}
+
+	log.Println(block)
 }

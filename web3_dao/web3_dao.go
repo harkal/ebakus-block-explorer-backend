@@ -94,16 +94,16 @@ func GetBlockNumber() (*big.Int, error) {
 }
 
 func GetBlock(number *big.Int) (*models.Block, error) {
-	var v map[string]*json.RawMessage
+	var v map[string]interface{}
 
 	err := cli.Call(&v, "eth_getBlockByNumber", hexutil.EncodeBig(number), true)
 	if err != nil {
 		return nil, err
 	}
 
-	bl := models.NewBlockFromWeb3Map(v)
+	log.Println(v)
 
-	return bl, nil
+	return nil, nil
 }
 
 // func SyncDatabase() {
