@@ -17,7 +17,7 @@ func main() {
 
 	block, err := web3_dao.GetBlock(number)
 	if err != nil {
-		log.Fatal("Failed to get last block number")
+		log.Fatal("Failed to get block ", number)
 	}
 
 	log.Println(block)
