@@ -6,13 +6,16 @@ import (
 	"encoding/json"
 	"errors"
 	"io/ioutil"
-	// "math/big"
+	"math/big"
 	"net/http"
+	// "net/rpc"
 	"sync"
 
 	// "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/kr/pretty"
+
+	"ebakus_server/models"
 )
 
 type ResponseBase struct {
@@ -59,7 +62,20 @@ type Request struct {
 var cli *Client
 
 func init() {
-	cli = NewClient("http://localhost:8545", nil)
+	cli = newClient("http://localhost:8545", nil)
+
+	/*** Test with rpc ***/
+	// cl, err := rpc.Dial("unix", "/Users/pantelisgiazitsis/ebakus/ebakus.ipc")
+	// if err != nil {
+	// 	log.Fatal(err.Error())
+	// }
+
+	// params := new(Request)
+	// var rep hexutil.Big
+	// err = cl.Call("eth_blockNumber",params,&rep)
+	// if err != nil {
+	// 	log.Fatal(err.Error())
+	// }
 } 
 
 func newClient(url string, httpClient *http.Client) *Client {
@@ -156,3 +172,12 @@ func GetBlock(number *big.Int) (*models.Block, error) {
 
 	return bl, nil
 }
+
+// func SyncDatabase() {
+// 	blockNumber, err := GetBlockNumber()
+// 	if err != nil {
+// 		log.Fatal(err.Error())
+// 	}
+
+	
+// }
