@@ -127,14 +127,34 @@ func (c *Client) CallMethod(v interface{}, method string, params ...interface{})
 	return json.Unmarshal(parsed.Result, v)
 }
 
-func GetBlockNumber() (*hexutil.Big, error) {
+// DAO API
+
+// 
+// Get the top block number 
+//
+func GetBlockNumber() (*big.Int, error) {
 	var v hexutil.Big
 
-	err := cli.CallMethod(&v, "eth_blockNumber")
+	err := cli.callMethod(&v, "eth_blockNumber")
 	if err != nil {
 		return nil, err
 	}
 
 	log.Print("block number is ", v.ToInt())
-	return &v, nil
+	return v.ToInt(), nil
 }
+
+func GetBlock(number *big.Int) (*models.Block, error) {
+	var v map[string]*json.RawMessage
+	
+	err := cli.callMethod(&v, "eth_getBlockByNumber",hexutil.EncodeBig(number), true)
+	if err != nil {
+		return nil, err
+	}
+
+	bl := models.NewBlockFromWeb3Map(v) 
+	log.Print(v)
+	log.Println(bl)
+	return nil, nil
+}
+
