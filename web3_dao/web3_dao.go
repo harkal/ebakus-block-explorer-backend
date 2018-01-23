@@ -68,17 +68,6 @@ func init() {
 	}
 }
 
-func newClient(url string, httpClient *http.Client) *Client {
-	if httpClient == nil {
-		httpClient = http.DefaultClient
-	}
-
-	return &Client{
-		url:        url,
-		httpClient: httpClient,
-	}
-}
-
 //
 // Get the top block number
 //
