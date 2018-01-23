@@ -62,7 +62,7 @@ func init() {
 	cli = NewClient("http://localhost:8545", nil)
 } 
 
-func NewClient(url string, httpClient *http.Client) *Client {
+func newClient(url string, httpClient *http.Client) *Client {
 	if httpClient == nil {
 		httpClient = http.DefaultClient
 	}
@@ -73,7 +73,7 @@ func NewClient(url string, httpClient *http.Client) *Client {
 	}
 }
 
-func (c *Client) CallMethod(v interface{}, method string, params ...interface{}) error {
+func (c *Client) callMethod(v interface{}, method string, params ...interface{}) error {
 	c.idLock.Lock()
 
 	c.id++
