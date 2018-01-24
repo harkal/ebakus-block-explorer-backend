@@ -20,3 +20,18 @@ type Block struct {
 	Transactions     []common.Hash
 	LogsBloom        types.Bloom
 }
+
+type Transaction struct {
+	Hash				common.Hash
+	Nonce				hexutil.Uint64
+	BlockHash 			common.Hash
+	BlockNumber 		hexutil.Uint64
+	TransactionIndex 	hexutil.Uint64
+	From				common.UnprefixedAddress
+	To					common.UnprefixedAddress
+	value 				hexutil.Uint64
+	GasPrice			hexutil.Uint64
+	Gas					hexutil.Uint64
+	//TODO: Find type for input
+//	Input				TYPE?
+}

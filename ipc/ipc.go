@@ -1,8 +1,10 @@
 package ipc
 
 import (
+	"github.com/ethereum/go-ethereum/common"
 	"ebakus_server/models"
 	"math/big"
+	"log"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/rpc"
@@ -44,4 +46,40 @@ func (ipc *IPCInterface) GetBlock(number *big.Int) (*models.Block, error) {
 	}
 
 	return &block, nil
+}
+
+func (ipc *IPCInterface) GetLastBlocks(count int64) ([]*models.Block, error) {
+	blockNumber, err := ipc.GetBlockNumber()
+	if err != nil {
+		return nil, err
+	}
+
+	first := blockNumber.Int64() 
+	last := first - count
+	
+	blocks := make([]*models.Block, 0)
+	for i := first; i > last && i >= 0 ; i-- {
+		bl, err := ipc.GetBlock(big.NewInt(i))
+		if err != nil {
+			log.Println(err.Error())
+		} else {
+			blocks = append(blocks,bl)
+		}
+	}
+	
+	return blocks, nil
+}
+
+func (ipc *IPCInterface) GetTransactionByHash(hash common.Hash) (*models.Transaction, error) {
+	var tr models.Transaction
+	err := ipc.cli.Call(&tr, "eth_getTransactionByHash", hash)
+	if err != nil {
+		log.Println(err.Error())
+
+		return nil, err
+	}
+
+	log.Println(tr)
+
+	return &tr, nil
 }
