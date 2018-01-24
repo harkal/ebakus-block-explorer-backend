@@ -2,7 +2,10 @@ package db
 
 import (
 	"database/sql"
+	"log"
 	"fmt"
+	"ebakus_server/models"
+
 	_ "github.com/lib/pq" // Register some standard stuff
 )
 
@@ -10,27 +13,34 @@ const (
 	host   = "localhost"
 	port   = 5432
 	user   = "postgres"
-	dbname = "postgres"
+	dbname = "ebakus"
 )
 
-var db *sql.DB	
+type DBClient struct {
+	db *sql.DB	
+}
 
 
-func init() {
+func NewClient() (*DBClient, error) {
 	psqlInfo := fmt.Sprintf("host=%s port=%d user=%s "+
 		"dbname=%s sslmode=disable",
 		host, port, user, dbname)
 	tdb, err := sql.Open("postgres", psqlInfo)
-	db = tdb
+	
 	if err != nil {
-		panic(err)
+		log.Println(err.Error())
+		return nil, err
 	}
+
 	// defer db.Close()
 
-	err = db.Ping()
+	err = tdb.Ping()
 	if err != nil {
-		panic(err)
+		log.Println(err.Error())
+		return nil, err
 	}
 
-	fmt.Println("Successfully connected!")
+	log.Println("Successfully connected!")
+
+	return &DBClient{tdb}, nil
 }
