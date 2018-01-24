@@ -1,6 +1,7 @@
 package db
 
 import (
+	"github.com/lib/pq"
 	"database/sql"
 	"log"
 	"fmt"
@@ -46,54 +47,69 @@ func NewClient() (*DBClient, error) {
 }
 
 func (cli *DBClient) InsertBlocks(blocks []*models.Block) error {
-	stmt := `INSERT INTO blocks (
-		number, 
-		timestamp, 
-		hash, 
-		parent_hash, 
-		state_root, 
-		transactions_root, 
-		receipts_root, 
-		size, 
-		gas_used,
-		gas_limit)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`
 	
 	if blocks==nil || len(blocks) == 0 {
 		return nil
 	}
 
-	bl := blocks[0]
+	txn, err := cli.db.Begin()
+	if err != nil {
+		log.Println(err.Error())
+		
+		return err
+	}
 
-	log.Println(		
-		bl.Number, 
-		bl.TimeStamp, 
-		bl.Hash.String(), 
-		bl.ParentHash.String(), 
-		bl.StateRoot.String(), 
-		bl.TransactionsRoot.String(),
-		bl.ReceiptsRoot.String(),
-		bl.Size,
-		bl.GasUsed,
-		bl.GasLimit)
+	stmt, err := txn.Prepare(pq.CopyIn("blocks",		
+		"number", 
+		"timestamp", 
+		"hash", 
+		"parent_hash", 
+		"state_root", 
+		"transactions_root", 
+		"receipts_root", 
+		"size", 
+		"gas_used",
+		"gas_limit"))
+	
+	if err != nil {
+		log.Println(err.Error())
 
-	_, err := cli.db.Exec(stmt,
-		bl.Number, 
-		bl.TimeStamp, 
-		bl.Hash.String(), 
-		bl.ParentHash.String(), 
-		bl.StateRoot.String(), 
-		bl.TransactionsRoot.String(),
-		bl.ReceiptsRoot.String(),
-		bl.Size,
-		bl.GasUsed,
-		bl.GasLimit,
-	 )
+		return err;
+	}
 
-	 if err != nil {
-		 log.Println(err.Error())
-		 return err
-	 }
+	for _, bl := range blocks {
+		_, err := stmt.Exec(
+			bl.Number, 
+			bl.TimeStamp, 
+			bl.Hash.String(), 
+			bl.ParentHash.String(), 
+			bl.StateRoot.String(), 
+			bl.TransactionsRoot.String(),
+			bl.ReceiptsRoot.String(),
+			bl.Size,
+			bl.GasUsed,
+			bl.GasLimit,
+		)
+		
+		if err != nil {
+			log.Println(err.Error())
+		}
+	}
 
-	 return nil
+	_, err = stmt.Exec()
+	if err != nil {
+		log.Println(err.Error())
+	}
+
+	err = stmt.Close()
+	if err != nil {
+		log.Println(err.Error())
+	}
+
+	err = txn.Commit()
+	if err != nil {
+		log.Println(err.Error())
+	}
+
+	return nil
 }
