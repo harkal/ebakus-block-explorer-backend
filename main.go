@@ -53,10 +53,9 @@ func pullNewBlocks(c *cli.Context) error {
 	first++
 	log.Printf("Going to insert blocks %d to %d (%d)", first, last, last-first+1)
 
-	ch := make(chan *models.Block, 512)
-
 	stime := time.Now()
 
+	ch := make(chan *models.Block, 512)
 	var ops int64 = 0
 
 	workerThreads := 8
