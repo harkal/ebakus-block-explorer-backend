@@ -2,7 +2,6 @@ package ipc
 
 import (
 	"ebakus_server/models"
-	"log"
 
 	"github.com/ethereum/go-ethereum/common"
 
@@ -73,14 +72,11 @@ func (ipc *IPCInterface) GetLastBlocks(count uint64) ([]*models.Block, error) {
 
 func (ipc *IPCInterface) GetTransactionByHash(hash common.Hash) (*models.Transaction, error) {
 	var tr models.Transaction
+
 	err := ipc.cli.Call(&tr, "eth_getTransactionByHash", hash)
 	if err != nil {
-		log.Println(err.Error())
-
 		return nil, err
 	}
-
-	log.Println(tr)
 
 	return &tr, nil
 }
