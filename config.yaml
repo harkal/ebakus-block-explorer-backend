@@ -5,3 +5,5 @@ dbname: ebakus
 dbuser: postgres
 dbpass: postgres
 dbport: 5432
+
+threads: 8

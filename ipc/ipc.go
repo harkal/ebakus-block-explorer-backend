@@ -94,8 +94,6 @@ func (ipc *IPCInterface) StreamBlocks(c chan *models.Block, ops *int64, first, l
 		return ErrInvalideBlockRange
 	}
 
-	atomic.AddInt64(ops, 1)
-
 	for i := uint64(offset); i < count; i = i + uint64(stride) {
 		bl, err := ipc.GetBlock(i + first)
 		if err != nil {
@@ -104,8 +102,7 @@ func (ipc *IPCInterface) StreamBlocks(c chan *models.Block, ops *int64, first, l
 		c <- bl
 	}
 
-	atomic.AddInt64(ops, -1)
-	if atomic.LoadInt64(ops) == 0 {
+	if atomic.AddInt64(ops, -1) == 0 {
 		close(c)
 	}
 

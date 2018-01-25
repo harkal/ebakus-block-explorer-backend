@@ -23,6 +23,34 @@ func expandHome(path string) string {
 	return path
 }
 
+func streamInsertBlocks(db *db.DBClient, ch chan *models.Block) (int, error) {
+	count := 0
+	blocks := make([]*models.Block, 0, 400)
+	for block := range ch {
+		if len(ch) >= 512 {
+			log.Println("Chocking ", block.Number, len(ch))
+		}
+		blocks = append(blocks, block)
+		if len(blocks) >= 400 {
+			err := db.InsertBlocks(blocks[:])
+			if err != nil {
+				return 0, err
+			}
+			count = count + len(blocks)
+			blocks = make([]*models.Block, 0, 400)
+		}
+	}
+
+	err := db.InsertBlocks(blocks[:])
+	if err != nil {
+		return 0, err
+	}
+
+	count = count + len(blocks)
+
+	return count, nil
+}
+
 func pullNewBlocks(c *cli.Context) error {
 	ipcFile := expandHome(c.String("ipc"))
 	ipc, err := ipc.NewIPCInterface(ipcFile)
@@ -56,36 +84,17 @@ func pullNewBlocks(c *cli.Context) error {
 	stime := time.Now()
 
 	ch := make(chan *models.Block, 512)
-	var ops int64 = 0
 
-	workerThreads := 8
-
+	workerThreads := c.Int("threads")
+	ops := int64(workerThreads)
 	for i := 0; i < workerThreads; i++ {
 		go ipc.StreamBlocks(ch, &ops, first, last, workerThreads, i)
 	}
 
-	blocks := make([]*models.Block, 0)
-	for block := range ch {
-		if len(ch) > 500 {
-			log.Println("Starving ", block.Number, len(ch))
-		}
-		blocks = append(blocks, block)
-		if len(blocks) > 256 {
-			err = db.InsertBlocks(blocks[:])
-			if err != nil {
-				log.Fatal("Failed to insert blocks")
-			}
-			blocks = make([]*models.Block, 0)
-		}
-	}
-
-	err = db.InsertBlocks(blocks[:])
-	if err != nil {
-		log.Fatal("Failed to insert blocks")
-	}
+	count, err := streamInsertBlocks(db, ch)
 
 	elapsed := time.Now().Sub(stime)
-	log.Printf("Processed %d blocks in %.3f (%.0f bps)", last-first+1, elapsed.Seconds(), float64(last-first+1)/elapsed.Seconds())
+	log.Printf("Processed %d blocks in %.3f (%.0f bps)", count, elapsed.Seconds(), float64(count)/elapsed.Seconds())
 
 	return err
 }
@@ -132,6 +141,10 @@ func main() {
 		altsrc.NewIntFlag(cli.IntFlag{
 			Name:  "dbport",
 			Value: 5432,
+		}),
+		altsrc.NewIntFlag(cli.IntFlag{
+			Name:  "threads",
+			Value: 8,
 		}),
 		cli.StringFlag{
 			Name:  "config",
