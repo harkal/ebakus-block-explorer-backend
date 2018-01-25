@@ -28,7 +28,12 @@ func pullNewBlocks(c *cli.Context) error {
 		log.Fatal("Failed to connect to ebakus", err)
 	}
 
-	db, err := db.NewClient()
+	dbname := c.String("dbname")
+	dbhost := c.String("dbhost")
+	dbport := c.Int("dbport")
+	dbuser := c.String("dbuser")
+	dbpass := c.String("dbpass")
+	db, err := db.NewClient(dbname, dbhost, dbport, dbuser, dbpass)
 	if err != nil {
 		log.Fatal("Failed to load db client")
 	}
@@ -83,6 +88,26 @@ func main() {
 			Name:  "ipc",
 			Usage: "The ebakus node to connect to e.g. ./ebakus/ebakus.ipc",
 			Value: "~/ebakus/ebakus.ipc",
+		}),
+		altsrc.NewStringFlag(cli.StringFlag{
+			Name:  "dbhost",
+			Value: "localhost",
+		}),
+		altsrc.NewStringFlag(cli.StringFlag{
+			Name:  "dbname",
+			Value: "ebakus",
+		}),
+		altsrc.NewStringFlag(cli.StringFlag{
+			Name:  "dbuser",
+			Value: "ebakus",
+		}),
+		altsrc.NewStringFlag(cli.StringFlag{
+			Name:  "dbpass",
+			Value: "",
+		}),
+		altsrc.NewIntFlag(cli.IntFlag{
+			Name:  "dbport",
+			Value: 5432,
 		}),
 		cli.StringFlag{
 			Name:  "config",

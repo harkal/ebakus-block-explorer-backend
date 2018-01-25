@@ -11,21 +11,14 @@ import (
 	_ "github.com/lib/pq" // Register some standard stuff
 )
 
-const (
-	host   = "localhost"
-	port   = 5432
-	user   = "postgres"
-	dbname = "ebakus"
-)
-
 type DBClient struct {
 	db *sql.DB
 }
 
-func NewClient() (*DBClient, error) {
+func NewClient(name, host string, port int, user string, pass string) (*DBClient, error) {
 	psqlInfo := fmt.Sprintf("host=%s port=%d user=%s "+
 		"dbname=%s sslmode=disable",
-		host, port, user, dbname)
+		host, port, user, name)
 	tdb, err := sql.Open("postgres", psqlInfo)
 
 	if err != nil {
