@@ -59,8 +59,6 @@ func (ipc *IPCInterface) GetLastBlocks(count uint64) ([]*models.Block, error) {
 		first = 0
 	}
 
-	log.Println(first, last, count)
-
 	blocks := make([]*models.Block, count)
 	for i := uint64(0); i < count; i++ {
 		bl, err := ipc.GetBlock(i + first)
