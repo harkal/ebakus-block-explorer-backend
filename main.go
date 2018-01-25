@@ -28,24 +28,29 @@ func pullNewBlocks(c *cli.Context) error {
 		log.Fatal("Failed to connect to ebakus", err)
 	}
 
-	number, err := ipc.GetBlockNumber()
+	db, err := db.NewClient()
+	if err != nil {
+		log.Fatal("Failed to load db client")
+	}
+
+	last, err := ipc.GetBlockNumber()
 	if err != nil {
 		log.Fatal("Failed to get last block number")
 	}
 
-	log.Println(number)
-
-	blocks, err := ipc.GetLastBlocks(1000)
-
+	first, err := db.GetLatestBlockNumber()
 	if err != nil {
-		log.Fatal("Failed to get last blocks")
+		return err
 	}
 
-	db, err := db.NewClient()
+	first++
 
+	blocks, err := ipc.GetBlocks(first, last)
 	if err != nil {
-		log.Fatal("Failed to load db client")
+		log.Fatal("Failed to get blocks")
 	}
+
+	log.Printf("Going to insert blocks %d to %d (%d)", first, last, len(blocks))
 
 	err = db.InsertBlocks(blocks[:])
 

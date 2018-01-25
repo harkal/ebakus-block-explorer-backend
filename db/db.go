@@ -42,6 +42,24 @@ func NewClient() (*DBClient, error) {
 	return &DBClient{tdb}, nil
 }
 
+func (cli *DBClient) GetLatestBlockNumber() (uint64, error) {
+	rows, err := cli.db.Query("SELECT max(number) FROM blocks")
+	if err != nil {
+		return 0, err
+	}
+	defer rows.Close()
+
+	var maxNumber uint64
+
+	rows.Next()
+	rows.Scan(&maxNumber)
+	if err = rows.Err(); err != nil {
+		return 0, err
+	}
+
+	return maxNumber, nil
+}
+
 func (cli *DBClient) InsertBlocks(blocks []models.Block) error {
 	if len(blocks) == 0 {
 		return nil
