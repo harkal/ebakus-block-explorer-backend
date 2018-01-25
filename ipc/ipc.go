@@ -47,7 +47,7 @@ func (ipc *IPCInterface) GetBlock(number uint64) (*models.Block, error) {
 	return &block, nil
 }
 
-func (ipc *IPCInterface) GetLastBlocks(count uint64) ([]*models.Block, error) {
+func (ipc *IPCInterface) GetLastBlocks(count uint64) ([]models.Block, error) {
 	last, err := ipc.GetBlockNumber()
 	if err != nil {
 		return nil, err
@@ -58,13 +58,13 @@ func (ipc *IPCInterface) GetLastBlocks(count uint64) ([]*models.Block, error) {
 		first = 0
 	}
 
-	blocks := make([]*models.Block, count)
+	blocks := make([]models.Block, count)
 	for i := uint64(0); i < count; i++ {
 		bl, err := ipc.GetBlock(i + first)
 		if err != nil {
 			return nil, err
 		}
-		blocks[i] = bl
+		blocks[i] = *bl
 	}
 
 	return blocks, nil
