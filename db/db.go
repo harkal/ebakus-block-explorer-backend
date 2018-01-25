@@ -33,29 +33,22 @@ func NewClient() (*DBClient, error) {
 		return nil, err
 	}
 
-	// defer db.Close()
-
 	err = tdb.Ping()
 	if err != nil {
 		log.Println(err.Error())
 		return nil, err
 	}
 
-	log.Println("Successfully connected!")
-
 	return &DBClient{tdb}, nil
 }
 
 func (cli *DBClient) InsertBlocks(blocks []models.Block) error {
-
 	if len(blocks) == 0 {
 		return nil
 	}
 
 	txn, err := cli.db.Begin()
 	if err != nil {
-		log.Println(err.Error())
-
 		return err
 	}
 
@@ -72,8 +65,6 @@ func (cli *DBClient) InsertBlocks(blocks []models.Block) error {
 		"gas_limit"))
 
 	if err != nil {
-		log.Println(err.Error())
-
 		return err
 	}
 
@@ -81,11 +72,11 @@ func (cli *DBClient) InsertBlocks(blocks []models.Block) error {
 		_, err := stmt.Exec(
 			bl.Number,
 			bl.TimeStamp,
-			bl.Hash.String(),
-			bl.ParentHash.String(),
-			bl.StateRoot.String(),
-			bl.TransactionsRoot.String(),
-			bl.ReceiptsRoot.String(),
+			bl.Hash.Bytes(),
+			bl.ParentHash.Bytes(),
+			bl.StateRoot.Bytes(),
+			bl.TransactionsRoot.Bytes(),
+			bl.ReceiptsRoot.Bytes(),
 			bl.Size,
 			bl.GasUsed,
 			bl.GasLimit,
