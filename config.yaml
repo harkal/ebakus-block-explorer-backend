@@ -1,1 +1,7 @@
 ipc: ~/ebakus/ebakus.ipc
+
+dbhost: localhost
+dbname: ebakus
+dbuser: postgres
+dbpass: postgres
+dbport: 5432
