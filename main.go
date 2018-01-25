@@ -56,8 +56,6 @@ func pullNewBlocks(c *cli.Context) error {
 }
 
 func main() {
-	log.Print("Starting...")
-
 	app := cli.NewApp()
 	app.Name = "Ebakus Blockchain Explorer"
 	app.Version = "0.0.1"
