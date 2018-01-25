@@ -94,6 +94,7 @@ func (ipc *IPCInterface) StreamTransactions(tCh chan *models.Transaction, hashCh
 			tCh <- tx
 		}
 	}
+	close(tCh)
 }
 
 func (ipc *IPCInterface) StreamBlocks(bCh chan *models.Block, tCh chan *common.Hash, ops *int64, first, last uint64, stride, offset int) error {
@@ -116,6 +117,7 @@ func (ipc *IPCInterface) StreamBlocks(bCh chan *models.Block, tCh chan *common.H
 
 	if atomic.AddInt64(ops, -1) == 0 {
 		close(bCh)
+		close(tCh)
 	}
 
 	return nil

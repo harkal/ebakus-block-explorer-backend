@@ -53,6 +53,20 @@ func streamInsertBlocks(db *db.DBClient, ch chan *models.Block) (int, error) {
 	return count, nil
 }
 
+func streamInsertTransactions(db *db.DBClient, txsCh chan *models.Transaction) {
+	txs := make([]*models.Transaction, 0, 400)
+	for t := range txsCh {
+
+		if len(txsCh) >= 512 {
+			log.Println("Chocking on transactions", len(txsCh))
+		}
+		txs = append(txs, t)
+		db.InsertTransactions(txs[:])
+		txs = make([]*models.Transaction, 0, 400)
+	}
+	db.InsertTransactions(txs[:])
+}
+
 func pullNewBlocks(c *cli.Context) error {
 	ipcFile := expandHome(c.String("ipc"))
 	ipc, err := ipc.NewIPCInterface(ipcFile)
@@ -96,24 +110,9 @@ func pullNewBlocks(c *cli.Context) error {
 	}
 
 	go ipc.StreamTransactions(txsCh, txsHashCh)
-
-	go func() {
-		txs := make([]*models.Transaction, 0, 400)
-		for t := range txsCh {
-
-			if len(txsCh) >= 512 {
-				log.Println("Chocking on transactions", len(txsCh))
-			}
-			txs = append(txs, t)
-			db.InsertTransactions(txs[:])
-			txs = make([]*models.Transaction, 0, 400)
-		}
-		db.InsertTransactions(txs[:])
-	}()
+	go streamInsertTransactions(db, txsCh)
 
 	count, err := streamInsertBlocks(db, blockCh)
-
-	close(txsCh)
 
 	elapsed := time.Now().Sub(stime)
 	log.Printf("Processed %d blocks in %.3f (%.0f bps)", count, elapsed.Seconds(), float64(count)/elapsed.Seconds())
