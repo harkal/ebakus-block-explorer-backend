@@ -53,6 +53,14 @@ func (cli *DBClient) GetLatestBlockNumber() (uint64, error) {
 	return maxNumber, nil
 }
 
+func (cli *DBClient) InsertTransactions(txs []*models.Transaction) error {
+	if len(txs) == 0 {
+		return nil
+	}
+	log.Println("Insert transaction", len(txs))
+	return nil
+}
+
 func (cli *DBClient) InsertBlocks(blocks []*models.Block) error {
 	if len(blocks) == 0 {
 		return nil

@@ -10,6 +10,8 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/ethereum/go-ethereum/common"
+
 	"github.com/urfave/cli/altsrc"
 	cli "gopkg.in/urfave/cli.v1"
 )
@@ -83,15 +85,35 @@ func pullNewBlocks(c *cli.Context) error {
 
 	stime := time.Now()
 
-	ch := make(chan *models.Block, 512)
+	blockCh := make(chan *models.Block, 512)
+	txsHashCh := make(chan *common.Hash, 512)
+	txsCh := make(chan *models.Transaction, 512)
 
 	workerThreads := c.Int("threads")
 	ops := int64(workerThreads)
 	for i := 0; i < workerThreads; i++ {
-		go ipc.StreamBlocks(ch, &ops, first, last, workerThreads, i)
+		go ipc.StreamBlocks(blockCh, txsHashCh, &ops, first, last, workerThreads, i)
 	}
 
-	count, err := streamInsertBlocks(db, ch)
+	go ipc.StreamTransactions(txsCh, txsHashCh)
+
+	go func() {
+		txs := make([]*models.Transaction, 0, 400)
+		for t := range txsCh {
+
+			if len(txsCh) >= 512 {
+				log.Println("Chocking on transactions", len(txsCh))
+			}
+			txs = append(txs, t)
+			db.InsertTransactions(txs[:])
+			txs = make([]*models.Transaction, 0, 400)
+		}
+		db.InsertTransactions(txs[:])
+	}()
+
+	count, err := streamInsertBlocks(db, blockCh)
+
+	close(txsCh)
 
 	elapsed := time.Now().Sub(stime)
 	log.Printf("Processed %d blocks in %.3f (%.0f bps)", count, elapsed.Seconds(), float64(count)/elapsed.Seconds())

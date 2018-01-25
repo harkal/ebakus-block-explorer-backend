@@ -88,7 +88,15 @@ func (ipc *IPCInterface) GetBlocks(first, last uint64) ([]*models.Block, error) 
 	return blocks, nil
 }
 
-func (ipc *IPCInterface) StreamBlocks(c chan *models.Block, ops *int64, first, last uint64, stride, offset int) error {
+func (ipc *IPCInterface) StreamTransactions(tCh chan *models.Transaction, hashCh chan *common.Hash) {
+	for hash := range hashCh {
+		if tx, err := ipc.GetTransactionByHash(hash); err == nil {
+			tCh <- tx
+		}
+	}
+}
+
+func (ipc *IPCInterface) StreamBlocks(bCh chan *models.Block, tCh chan *common.Hash, ops *int64, first, last uint64, stride, offset int) error {
 	count := last - first + 1
 	if count < 0 {
 		return ErrInvalideBlockRange
@@ -99,17 +107,21 @@ func (ipc *IPCInterface) StreamBlocks(c chan *models.Block, ops *int64, first, l
 		if err != nil {
 			return err
 		}
-		c <- bl
+		bCh <- bl
+
+		for _, tx := range bl.Transactions {
+			tCh <- &tx
+		}
 	}
 
 	if atomic.AddInt64(ops, -1) == 0 {
-		close(c)
+		close(bCh)
 	}
 
 	return nil
 }
 
-func (ipc *IPCInterface) GetTransactionByHash(hash common.Hash) (*models.Transaction, error) {
+func (ipc *IPCInterface) GetTransactionByHash(hash *common.Hash) (*models.Transaction, error) {
 	var tr models.Transaction
 
 	err := ipc.cli.Call(&tr, "eth_getTransactionByHash", hash)
