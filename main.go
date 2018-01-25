@@ -8,7 +8,8 @@ import (
 	"os/user"
 	"path/filepath"
 
-	"github.com/urfave/cli"
+	"github.com/urfave/cli/altsrc"
+	cli "gopkg.in/urfave/cli.v1"
 )
 
 func expandHome(path string) string {
@@ -73,10 +74,14 @@ func main() {
 	app.Usage = "Run in various modes depending on funcion mode"
 
 	genericFlags := []cli.Flag{
-		cli.StringFlag{
+		altsrc.NewStringFlag(cli.StringFlag{
 			Name:  "ipc",
 			Usage: "The ebakus node to connect to e.g. ./ebakus/ebakus.ipc",
 			Value: "~/ebakus/ebakus.ipc",
+		}),
+		cli.StringFlag{
+			Name:  "config",
+			Value: "config.yaml",
 		},
 	}
 
@@ -85,6 +90,7 @@ func main() {
 			Name:    "fetchblocks",
 			Aliases: []string{"f"},
 			Usage:   "Fetch new blocks from ebakus node",
+			Before:  altsrc.InitInputSourceWithContext(genericFlags, altsrc.NewYamlSourceFromFlagFunc("config")),
 			Flags:   genericFlags,
 			Action:  pullNewBlocks,
 		},
