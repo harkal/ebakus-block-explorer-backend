@@ -3,6 +3,7 @@ package ipc
 import (
 	"ebakus_server/models"
 	"errors"
+	"sync/atomic"
 
 	"github.com/ethereum/go-ethereum/common"
 
@@ -85,6 +86,30 @@ func (ipc *IPCInterface) GetBlocks(first, last uint64) ([]models.Block, error) {
 	}
 
 	return blocks, nil
+}
+
+func (ipc *IPCInterface) StreamBlocks(c chan *models.Block, ops *int64, first, last uint64, stride, offset int) error {
+	count := last - first + 1
+	if count < 0 {
+		return ErrInvalideBlockRange
+	}
+
+	atomic.AddInt64(ops, 1)
+
+	for i := uint64(offset); i < count; i = i + uint64(stride) {
+		bl, err := ipc.GetBlock(i + first)
+		if err != nil {
+			return err
+		}
+		c <- bl
+	}
+
+	atomic.AddInt64(ops, -1)
+	if atomic.LoadInt64(ops) == 0 {
+		close(c)
+	}
+
+	return nil
 }
 
 func (ipc *IPCInterface) GetTransactionByHash(hash common.Hash) (*models.Transaction, error) {

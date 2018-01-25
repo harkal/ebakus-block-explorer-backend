@@ -53,7 +53,7 @@ func (cli *DBClient) GetLatestBlockNumber() (uint64, error) {
 	return maxNumber, nil
 }
 
-func (cli *DBClient) InsertBlocks(blocks []models.Block) error {
+func (cli *DBClient) InsertBlocks(blocks []*models.Block) error {
 	if len(blocks) == 0 {
 		return nil
 	}

@@ -3,10 +3,12 @@ package main
 import (
 	"ebakus_server/db"
 	"ebakus_server/ipc"
+	"ebakus_server/models"
 	"log"
 	"os"
 	"os/user"
 	"path/filepath"
+	"time"
 
 	"github.com/urfave/cli/altsrc"
 	cli "gopkg.in/urfave/cli.v1"
@@ -49,19 +51,42 @@ func pullNewBlocks(c *cli.Context) error {
 	}
 
 	first++
+	log.Printf("Going to insert blocks %d to %d (%d)", first, last, last-first+1)
 
-	blocks, err := ipc.GetBlocks(first, last)
-	if err != nil {
-		log.Fatal("Failed to get blocks")
+	ch := make(chan *models.Block, 512)
+
+	stime := time.Now()
+
+	var ops int64 = 0
+
+	workerThreads := 8
+
+	for i := 0; i < workerThreads; i++ {
+		go ipc.StreamBlocks(ch, &ops, first, last, workerThreads, i)
 	}
 
-	log.Printf("Going to insert blocks %d to %d (%d)", first, last, len(blocks))
+	blocks := make([]*models.Block, 0)
+	for block := range ch {
+		if len(ch) > 500 {
+			log.Println("Starving ", block.Number, len(ch))
+		}
+		blocks = append(blocks, block)
+		if len(blocks) > 256 {
+			err = db.InsertBlocks(blocks[:])
+			if err != nil {
+				log.Fatal("Failed to insert blocks")
+			}
+			blocks = make([]*models.Block, 0)
+		}
+	}
 
 	err = db.InsertBlocks(blocks[:])
-
 	if err != nil {
 		log.Fatal("Failed to insert blocks")
 	}
+
+	elapsed := time.Now().Sub(stime)
+	log.Printf("Processed %d blocks in %.3f (%.0f bps)", last-first+1, elapsed.Seconds(), float64(last-first+1)/elapsed.Seconds())
 
 	return err
 }
