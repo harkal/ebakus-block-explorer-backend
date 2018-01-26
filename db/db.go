@@ -53,6 +53,41 @@ func (cli *DBClient) GetLatestBlockNumber() (uint64, error) {
 	return maxNumber, nil
 }
 
+func (cli *DBClient) GetBlock(number uint64) (*models.Block, error) {
+	rows, err := cli.db.Query("SELECT * FROM blocks WHERE number = $1", number)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var block models.Block
+
+	var hash, parentHash, stateRoot, transactionsRoot, receiptsRoot []byte
+
+	rows.Next()
+	rows.Scan(&block.Number,
+		&block.TimeStamp,
+		&hash,
+		&parentHash,
+		&stateRoot,
+		&transactionsRoot,
+		&receiptsRoot,
+		&block.Size,
+		&block.GasUsed,
+		&block.GasLimit)
+	if err = rows.Err(); err != nil {
+		return nil, err
+	}
+
+	block.Hash.SetBytes(hash)
+	block.ParentHash.SetBytes(parentHash)
+	block.StateRoot.SetBytes(stateRoot)
+	block.TransactionsRoot.SetBytes(transactionsRoot)
+	block.ReceiptsRoot.SetBytes(receiptsRoot)
+
+	return &block, nil
+}
+
 func (cli *DBClient) InsertTransactions(txs []*models.Transaction) error {
 	if len(txs) == 0 {
 		return nil
