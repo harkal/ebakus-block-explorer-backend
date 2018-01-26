@@ -12,15 +12,15 @@ type Block struct {
 	Number           hexutil.Uint64 `json:"number"`
 	TimeStamp        hexutil.Uint64 `json:"timestamp"`
 	Hash             common.Hash    `json:"hash"`
-	ParentHash       common.Hash    `json:"parent_hash"`
-	StateRoot        common.Hash    `json:"state_root"`
-	TransactionsRoot common.Hash    `json:"transactions_root"`
-	ReceiptsRoot     common.Hash    `json:"receipts_root"`
+	ParentHash       common.Hash    `json:"parentHash"`
+	StateRoot        common.Hash    `json:"stateRoot"`
+	TransactionsRoot common.Hash    `json:"transactionsRoot"`
+	ReceiptsRoot     common.Hash    `json:"receiptsRoot"`
 	Size             hexutil.Uint64 `json:"size"`
-	GasUsed          hexutil.Uint64 `json:"gas_used"`
-	GasLimit         hexutil.Uint64 `json:"gas_limit"`
-	Transactions     []common.Hash  `json:"-"`
-	LogsBloom        types.Bloom    `json:"-"`
+	GasUsed          hexutil.Uint64 `json:"gasUsed"`
+	GasLimit         hexutil.Uint64 `json:"gasLimit"`
+	Transactions     []common.Hash  `json:"transactions"`
+	LogsBloom        types.Bloom    `json:"logBloom"`
 }
 
 type blockMarshaling struct {

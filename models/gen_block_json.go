@@ -17,15 +17,15 @@ func (b Block) MarshalJSON() ([]byte, error) {
 		Number           uint64        `json:"number"`
 		TimeStamp        uint64        `json:"timestamp"`
 		Hash             common.Hash   `json:"hash"`
-		ParentHash       common.Hash   `json:"parent_hash"`
-		StateRoot        common.Hash   `json:"state_root"`
-		TransactionsRoot common.Hash   `json:"transactions_root"`
-		ReceiptsRoot     common.Hash   `json:"receipts_root"`
+		ParentHash       common.Hash   `json:"parentHash"`
+		StateRoot        common.Hash   `json:"stateRoot"`
+		TransactionsRoot common.Hash   `json:"transactionsRoot"`
+		ReceiptsRoot     common.Hash   `json:"receiptsRoot"`
 		Size             uint64        `json:"size"`
-		GasUsed          uint64        `json:"gas_used"`
-		GasLimit         uint64        `json:"gas_limit"`
-		Transactions     []common.Hash `json:"-"`
-		LogsBloom        types.Bloom   `json:"-"`
+		GasUsed          uint64        `json:"gasUsed"`
+		GasLimit         uint64        `json:"gasLimit"`
+		Transactions     []common.Hash `json:"transactions"`
+		LogsBloom        types.Bloom   `json:"logBloom"`
 	}
 	var enc Block
 	enc.Number = uint64(b.Number)
@@ -48,15 +48,15 @@ func (b *Block) UnmarshalJSON(input []byte) error {
 		Number           *uint64       `json:"number"`
 		TimeStamp        *uint64       `json:"timestamp"`
 		Hash             *common.Hash  `json:"hash"`
-		ParentHash       *common.Hash  `json:"parent_hash"`
-		StateRoot        *common.Hash  `json:"state_root"`
-		TransactionsRoot *common.Hash  `json:"transactions_root"`
-		ReceiptsRoot     *common.Hash  `json:"receipts_root"`
+		ParentHash       *common.Hash  `json:"parentHash"`
+		StateRoot        *common.Hash  `json:"stateRoot"`
+		TransactionsRoot *common.Hash  `json:"transactionsRoot"`
+		ReceiptsRoot     *common.Hash  `json:"receiptsRoot"`
 		Size             *uint64       `json:"size"`
-		GasUsed          *uint64       `json:"gas_used"`
-		GasLimit         *uint64       `json:"gas_limit"`
-		Transactions     []common.Hash `json:"-"`
-		LogsBloom        *types.Bloom  `json:"-"`
+		GasUsed          *uint64       `json:"gasUsed"`
+		GasLimit         *uint64       `json:"gasLimit"`
+		Transactions     []common.Hash `json:"transactions"`
+		LogsBloom        *types.Bloom  `json:"logBloom"`
 	}
 	var dec Block
 	if err := json.Unmarshal(input, &dec); err != nil {
