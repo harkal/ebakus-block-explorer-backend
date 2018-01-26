@@ -45,7 +45,9 @@ func getBlock(c *cli.Context) error {
 		return err
 	}
 
-	json, _ := json.MarshalIndent(block, "", "  ")
+	jsonBlock := models.JSONBlock(*block)
+
+	json, _ := json.MarshalIndent(jsonBlock, "", "  ")
 	fmt.Printf("%s\n", json)
 
 	return nil

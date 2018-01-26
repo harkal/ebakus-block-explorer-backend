@@ -1,6 +1,8 @@
 package models
 
 import (
+	"encoding/json"
+
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -23,7 +25,33 @@ type Block struct {
 	LogsBloom        types.Bloom    `json:"logBloom"`
 }
 
-type blockMarshaling struct {
+type JSONBlock Block
+
+func (b JSONBlock) MarshalJSON() ([]byte, error) {
+	type Block struct {
+		Number           uint64      `json:"number"`
+		TimeStamp        uint64      `json:"timestamp"`
+		Hash             common.Hash `json:"hash"`
+		ParentHash       common.Hash `json:"parentHash"`
+		StateRoot        common.Hash `json:"stateRoot"`
+		TransactionsRoot common.Hash `json:"transactionsRoot"`
+		ReceiptsRoot     common.Hash `json:"receiptsRoot"`
+		Size             uint64      `json:"size"`
+		GasUsed          uint64      `json:"gasUsed"`
+		GasLimit         uint64      `json:"gasLimit"`
+	}
+	var enc Block
+	enc.Number = uint64(b.Number)
+	enc.TimeStamp = uint64(b.TimeStamp)
+	enc.Hash = b.Hash
+	enc.ParentHash = b.ParentHash
+	enc.StateRoot = b.StateRoot
+	enc.TransactionsRoot = b.TransactionsRoot
+	enc.ReceiptsRoot = b.ReceiptsRoot
+	enc.Size = uint64(b.Size)
+	enc.GasUsed = uint64(b.GasUsed)
+	enc.GasLimit = uint64(b.GasLimit)
+	return json.Marshal(&enc)
 }
 
 type Transaction struct {
