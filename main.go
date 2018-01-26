@@ -16,6 +16,11 @@ import (
 	cli "gopkg.in/urfave/cli.v1"
 )
 
+func getBlock(c *cli.Context) error {
+
+	return nil
+}
+
 func expandHome(path string) string {
 	if len(path) >= 2 && path[:2] == "~/" {
 		usr, _ := user.Current()
@@ -67,6 +72,16 @@ func streamInsertTransactions(db *db.DBClient, txsCh chan *models.Transaction) {
 	db.InsertTransactions(txs[:])
 }
 
+func createDBClient(c *cli.Context) (*db.DBClient, error) {
+	dbname := c.String("dbname")
+	dbhost := c.String("dbhost")
+	dbport := c.Int("dbport")
+	dbuser := c.String("dbuser")
+	dbpass := c.String("dbpass")
+
+	return db.NewClient(dbname, dbhost, dbport, dbuser, dbpass)
+}
+
 func pullNewBlocks(c *cli.Context) error {
 	ipcFile := expandHome(c.String("ipc"))
 	ipc, err := ipc.NewIPCInterface(ipcFile)
@@ -74,12 +89,7 @@ func pullNewBlocks(c *cli.Context) error {
 		log.Fatal("Failed to connect to ebakus", err)
 	}
 
-	dbname := c.String("dbname")
-	dbhost := c.String("dbhost")
-	dbport := c.Int("dbport")
-	dbuser := c.String("dbuser")
-	dbpass := c.String("dbpass")
-	db, err := db.NewClient(dbname, dbhost, dbport, dbuser, dbpass)
+	db, err := createDBClient(c)
 	if err != nil {
 		log.Fatal("Failed to load db client")
 	}
@@ -181,6 +191,14 @@ func main() {
 			Before:  altsrc.InitInputSourceWithContext(genericFlags, altsrc.NewYamlSourceFromFlagFunc("config")),
 			Flags:   genericFlags,
 			Action:  pullNewBlocks,
+		},
+		{
+			Name:    "getblock",
+			Aliases: []string{"gb"},
+			Usage:   "Retrieve block from database",
+			Before:  altsrc.InitInputSourceWithContext(genericFlags, altsrc.NewYamlSourceFromFlagFunc("config")),
+			Flags:   genericFlags,
+			Action:  getBlock,
 		},
 	}
 
