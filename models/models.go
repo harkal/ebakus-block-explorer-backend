@@ -24,11 +24,6 @@ type Block struct {
 }
 
 type blockMarshaling struct {
-	Number    uint64
-	TimeStamp uint64
-	Size      uint64
-	GasUsed   uint64
-	GasLimit  uint64
 }
 
 type Transaction struct {

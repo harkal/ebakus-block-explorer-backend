@@ -14,30 +14,30 @@ var _ = (*blockMarshaling)(nil)
 
 func (b Block) MarshalJSON() ([]byte, error) {
 	type Block struct {
-		Number           uint64        `json:"number"`
-		TimeStamp        uint64        `json:"timestamp"`
-		Hash             common.Hash   `json:"hash"`
-		ParentHash       common.Hash   `json:"parentHash"`
-		StateRoot        common.Hash   `json:"stateRoot"`
-		TransactionsRoot common.Hash   `json:"transactionsRoot"`
-		ReceiptsRoot     common.Hash   `json:"receiptsRoot"`
-		Size             uint64        `json:"size"`
-		GasUsed          uint64        `json:"gasUsed"`
-		GasLimit         uint64        `json:"gasLimit"`
-		Transactions     []common.Hash `json:"transactions"`
-		LogsBloom        types.Bloom   `json:"logBloom"`
+		Number           hexutil.Uint64 `json:"number"`
+		TimeStamp        hexutil.Uint64 `json:"timestamp"`
+		Hash             common.Hash    `json:"hash"`
+		ParentHash       common.Hash    `json:"parentHash"`
+		StateRoot        common.Hash    `json:"stateRoot"`
+		TransactionsRoot common.Hash    `json:"transactionsRoot"`
+		ReceiptsRoot     common.Hash    `json:"receiptsRoot"`
+		Size             hexutil.Uint64 `json:"size"`
+		GasUsed          hexutil.Uint64 `json:"gasUsed"`
+		GasLimit         hexutil.Uint64 `json:"gasLimit"`
+		Transactions     []common.Hash  `json:"transactions"`
+		LogsBloom        types.Bloom    `json:"logBloom"`
 	}
 	var enc Block
-	enc.Number = uint64(b.Number)
-	enc.TimeStamp = uint64(b.TimeStamp)
+	enc.Number = b.Number
+	enc.TimeStamp = b.TimeStamp
 	enc.Hash = b.Hash
 	enc.ParentHash = b.ParentHash
 	enc.StateRoot = b.StateRoot
 	enc.TransactionsRoot = b.TransactionsRoot
 	enc.ReceiptsRoot = b.ReceiptsRoot
-	enc.Size = uint64(b.Size)
-	enc.GasUsed = uint64(b.GasUsed)
-	enc.GasLimit = uint64(b.GasLimit)
+	enc.Size = b.Size
+	enc.GasUsed = b.GasUsed
+	enc.GasLimit = b.GasLimit
 	enc.Transactions = b.Transactions
 	enc.LogsBloom = b.LogsBloom
 	return json.Marshal(&enc)
@@ -45,28 +45,28 @@ func (b Block) MarshalJSON() ([]byte, error) {
 
 func (b *Block) UnmarshalJSON(input []byte) error {
 	type Block struct {
-		Number           *uint64       `json:"number"`
-		TimeStamp        *uint64       `json:"timestamp"`
-		Hash             *common.Hash  `json:"hash"`
-		ParentHash       *common.Hash  `json:"parentHash"`
-		StateRoot        *common.Hash  `json:"stateRoot"`
-		TransactionsRoot *common.Hash  `json:"transactionsRoot"`
-		ReceiptsRoot     *common.Hash  `json:"receiptsRoot"`
-		Size             *uint64       `json:"size"`
-		GasUsed          *uint64       `json:"gasUsed"`
-		GasLimit         *uint64       `json:"gasLimit"`
-		Transactions     []common.Hash `json:"transactions"`
-		LogsBloom        *types.Bloom  `json:"logBloom"`
+		Number           *hexutil.Uint64 `json:"number"`
+		TimeStamp        *hexutil.Uint64 `json:"timestamp"`
+		Hash             *common.Hash    `json:"hash"`
+		ParentHash       *common.Hash    `json:"parentHash"`
+		StateRoot        *common.Hash    `json:"stateRoot"`
+		TransactionsRoot *common.Hash    `json:"transactionsRoot"`
+		ReceiptsRoot     *common.Hash    `json:"receiptsRoot"`
+		Size             *hexutil.Uint64 `json:"size"`
+		GasUsed          *hexutil.Uint64 `json:"gasUsed"`
+		GasLimit         *hexutil.Uint64 `json:"gasLimit"`
+		Transactions     []common.Hash   `json:"transactions"`
+		LogsBloom        *types.Bloom    `json:"logBloom"`
 	}
 	var dec Block
 	if err := json.Unmarshal(input, &dec); err != nil {
 		return err
 	}
 	if dec.Number != nil {
-		b.Number = hexutil.Uint64(*dec.Number)
+		b.Number = *dec.Number
 	}
 	if dec.TimeStamp != nil {
-		b.TimeStamp = hexutil.Uint64(*dec.TimeStamp)
+		b.TimeStamp = *dec.TimeStamp
 	}
 	if dec.Hash != nil {
 		b.Hash = *dec.Hash
@@ -84,13 +84,13 @@ func (b *Block) UnmarshalJSON(input []byte) error {
 		b.ReceiptsRoot = *dec.ReceiptsRoot
 	}
 	if dec.Size != nil {
-		b.Size = hexutil.Uint64(*dec.Size)
+		b.Size = *dec.Size
 	}
 	if dec.GasUsed != nil {
-		b.GasUsed = hexutil.Uint64(*dec.GasUsed)
+		b.GasUsed = *dec.GasUsed
 	}
 	if dec.GasLimit != nil {
-		b.GasLimit = hexutil.Uint64(*dec.GasLimit)
+		b.GasLimit = *dec.GasLimit
 	}
 	if dec.Transactions != nil {
 		b.Transactions = dec.Transactions

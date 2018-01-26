@@ -3,7 +3,6 @@ package ipc
 import (
 	"ebakus_server/models"
 	"errors"
-	"log"
 	"sync/atomic"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -105,14 +104,12 @@ func (ipc *IPCInterface) StreamBlocks(bCh chan *models.Block, tCh chan *common.H
 	}
 
 	for i := uint64(offset); i < count; i = i + uint64(stride) {
-		log.Printf("Get block %d", i+first)
 		bl, err := ipc.GetBlock(i + first)
 		if err != nil {
 			return err
 		}
 		bCh <- bl
 
-		log.Printf("Get block %d tsx %d", len(bl.Transactions))
 		for _, tx := range bl.Transactions {
 			tCh <- &tx
 		}
