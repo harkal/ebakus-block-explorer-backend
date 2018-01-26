@@ -4,10 +4,13 @@ import (
 	"ebakus_server/db"
 	"ebakus_server/ipc"
 	"ebakus_server/models"
+	"encoding/json"
+	"fmt"
 	"log"
 	"os"
 	"os/user"
 	"path/filepath"
+	"strconv"
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -16,7 +19,34 @@ import (
 	cli "gopkg.in/urfave/cli.v1"
 )
 
+func createDBClient(c *cli.Context) (*db.DBClient, error) {
+	dbname := c.String("dbname")
+	dbhost := c.String("dbhost")
+	dbport := c.Int("dbport")
+	dbuser := c.String("dbuser")
+	dbpass := c.String("dbpass")
+
+	return db.NewClient(dbname, dbhost, dbport, dbuser, dbpass)
+}
+
 func getBlock(c *cli.Context) error {
+	number, err := strconv.Atoi(c.Args().Get(0))
+	if err != nil {
+		return err
+	}
+
+	db, err := createDBClient(c)
+	if err != nil {
+		return err
+	}
+
+	block, err := db.GetBlock(uint64(number))
+	if err != nil {
+		return err
+	}
+
+	json, _ := json.MarshalIndent(block, "", "  ")
+	fmt.Printf("%s\n", json)
 
 	return nil
 }
@@ -70,16 +100,6 @@ func streamInsertTransactions(db *db.DBClient, txsCh chan *models.Transaction) {
 		txs = make([]*models.Transaction, 0, 400)
 	}
 	db.InsertTransactions(txs[:])
-}
-
-func createDBClient(c *cli.Context) (*db.DBClient, error) {
-	dbname := c.String("dbname")
-	dbhost := c.String("dbhost")
-	dbport := c.Int("dbport")
-	dbuser := c.String("dbuser")
-	dbpass := c.String("dbpass")
-
-	return db.NewClient(dbname, dbhost, dbport, dbuser, dbpass)
 }
 
 func pullNewBlocks(c *cli.Context) error {
