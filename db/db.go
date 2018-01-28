@@ -2,9 +2,10 @@ package db
 
 import (
 	"database/sql"
-	"ebakus_server/models"
 	"fmt"
 	"log"
+
+	"bitbucket.org/pantelisss/ebakus_server/models"
 
 	"github.com/lib/pq"
 

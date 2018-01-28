@@ -1,9 +1,10 @@
 package ipc
 
 import (
-	"ebakus_server/models"
 	"errors"
 	"sync/atomic"
+
+	"bitbucket.org/pantelisss/ebakus_server/models"
 
 	"github.com/ethereum/go-ethereum/common"
 
