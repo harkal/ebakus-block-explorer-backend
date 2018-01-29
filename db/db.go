@@ -8,8 +8,6 @@ import (
 	"bitbucket.org/pantelisss/ebakus_server/models"
 
 	"github.com/lib/pq"
-
-	_ "github.com/lib/pq" // Register some standard stuff
 )
 
 type DBClient struct {
