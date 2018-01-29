@@ -2,13 +2,12 @@ package db
 
 import (
 	"database/sql"
-	"ebakus_server/models"
 	"fmt"
 	"log"
 
-	"github.com/lib/pq"
+	"bitbucket.org/pantelisss/ebakus_server/models"
 
-	_ "github.com/lib/pq" // Register some standard stuff
+	"github.com/lib/pq"
 )
 
 type DBClient struct {

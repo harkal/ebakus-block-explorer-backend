@@ -1,9 +1,6 @@
 package main
 
 import (
-	"ebakus_server/db"
-	"ebakus_server/ipc"
-	"ebakus_server/models"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -12,6 +9,10 @@ import (
 	"path/filepath"
 	"strconv"
 	"time"
+
+	"bitbucket.org/pantelisss/ebakus_server/db"
+	"bitbucket.org/pantelisss/ebakus_server/ipc"
+	"bitbucket.org/pantelisss/ebakus_server/models"
 
 	"github.com/ethereum/go-ethereum/common"
 

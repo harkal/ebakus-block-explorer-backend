@@ -1,7 +1,7 @@
 package main
 
 import (
-	_ "ebakus_server/db"
+	_ "bitbucket.org/pantelisss/ebakus_server/db"
 	// "encoding/json"
 	"fmt"
 	"log"
@@ -18,7 +18,7 @@ func main() {
 }
 
 func handleBlock(w http.ResponseWriter, r *http.Request) {
- 
+
 	w.Header().Set("Content-Type", "application/json")
 
 	vars := mux.Vars(r)
@@ -26,7 +26,7 @@ func handleBlock(w http.ResponseWriter, r *http.Request) {
 
 	log.Println("Request for:", id)
 
-	if r.Method == "GET"{
+	if r.Method == "GET" {
 		// if error != nil {
 		// 	log.Println(error.Error())
 		// 	http.Error(w, error.Error(), http.StatusInternalServerError)
