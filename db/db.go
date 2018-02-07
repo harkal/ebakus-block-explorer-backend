@@ -1,9 +1,11 @@
 package db
 
 import (
+	"bytes"
 	"database/sql"
 	"fmt"
 	"log"
+	"text/template"
 
 	"bitbucket.org/pantelisss/ebakus_server/models"
 
@@ -14,11 +16,44 @@ type DBClient struct {
 	db *sql.DB
 }
 
+func makeConnString(name, host string, port int, user string, pass string) (string, error) {
+	templ, err := template.New("psql_connection_string").Parse("postgres://{{.User}}:{{.Pass}}@{{.Host}}:{{.Port}}/{{.Name}}?sslmode=disable")
+
+	if err != nil {
+		log.Println(err.Error())
+		return string(""), err
+	}
+
+	data := struct {
+		User string
+		Pass string
+		Host string
+		Port int
+		Name string
+	}{
+		user,
+		pass,
+		host,
+		port,
+		name,
+	}
+
+	buff := new(bytes.Buffer)
+	err = templ.Execute(buff, data)
+
+	return buff.String(), err
+}
+
 func NewClient(name, host string, port int, user string, pass string) (*DBClient, error) {
-	psqlInfo := fmt.Sprintf("host=%s port=%d user=%s "+
-		"dbname=%s sslmode=disable",
-		host, port, user, name)
-	tdb, err := sql.Open("postgres", psqlInfo)
+	conn, err := makeConnString(name, host, port, user, pass)
+
+	if err != nil {
+		log.Println(err.Error())
+		return nil, err
+	}
+
+	fmt.Println(conn)
+	tdb, err := sql.Open("postgres", conn)
 
 	if err != nil {
 		log.Println(err.Error())
