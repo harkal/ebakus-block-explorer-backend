@@ -3,6 +3,7 @@ package db
 import (
 	"bytes"
 	"database/sql"
+	"errors"
 	"fmt"
 	"log"
 	"text/template"
@@ -64,6 +65,27 @@ func NewClient(name, host string, port int, user string, pass string) (*DBClient
 	if err != nil {
 		log.Println(err.Error())
 		return nil, err
+	}
+
+	// Check if all required tables exist
+	rows, err := tdb.Query("SELECT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'blocks');")
+
+	if err != nil {
+		log.Println(err.Error())
+		return nil, err
+	}
+	defer rows.Close()
+
+	var tableExists bool
+	rows.Next()
+	if err := rows.Scan(&tableExists); err != nil {
+		log.Println(err.Error())
+		return nil, err
+	}
+
+	if !tableExists {
+		log.Println("Missing table: blocks. Make sure all required tables are created.")
+		return nil, errors.New("Missing table: blocks")
 	}
 
 	return &DBClient{tdb}, nil
