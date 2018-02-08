@@ -1,9 +1,12 @@
 package db
 
 import (
+	"bytes"
 	"database/sql"
+	"errors"
 	"fmt"
 	"log"
+	"text/template"
 
 	"bitbucket.org/pantelisss/ebakus_server/models"
 
@@ -14,11 +17,44 @@ type DBClient struct {
 	db *sql.DB
 }
 
+func makeConnString(name, host string, port int, user string, pass string) (string, error) {
+	templ, err := template.New("psql_connection_string").Parse("postgres://{{.User}}:{{.Pass}}@{{.Host}}:{{.Port}}/{{.Name}}?sslmode=disable")
+
+	if err != nil {
+		log.Println(err.Error())
+		return string(""), err
+	}
+
+	data := struct {
+		User string
+		Pass string
+		Host string
+		Port int
+		Name string
+	}{
+		user,
+		pass,
+		host,
+		port,
+		name,
+	}
+
+	buff := new(bytes.Buffer)
+	err = templ.Execute(buff, data)
+
+	return buff.String(), err
+}
+
 func NewClient(name, host string, port int, user string, pass string) (*DBClient, error) {
-	psqlInfo := fmt.Sprintf("host=%s port=%d user=%s "+
-		"dbname=%s sslmode=disable",
-		host, port, user, name)
-	tdb, err := sql.Open("postgres", psqlInfo)
+	conn, err := makeConnString(name, host, port, user, pass)
+
+	if err != nil {
+		log.Println(err.Error())
+		return nil, err
+	}
+
+	fmt.Println(conn)
+	tdb, err := sql.Open("postgres", conn)
 
 	if err != nil {
 		log.Println(err.Error())
@@ -29,6 +65,27 @@ func NewClient(name, host string, port int, user string, pass string) (*DBClient
 	if err != nil {
 		log.Println(err.Error())
 		return nil, err
+	}
+
+	// Check if all required tables exist
+	rows, err := tdb.Query("SELECT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'blocks');")
+
+	if err != nil {
+		log.Println(err.Error())
+		return nil, err
+	}
+	defer rows.Close()
+
+	var tableExists bool
+	rows.Next()
+	if err := rows.Scan(&tableExists); err != nil {
+		log.Println(err.Error())
+		return nil, err
+	}
+
+	if !tableExists {
+		log.Println("Missing table: blocks. Make sure all required tables are created.")
+		return nil, errors.New("Missing table: blocks")
 	}
 
 	return &DBClient{tdb}, nil
