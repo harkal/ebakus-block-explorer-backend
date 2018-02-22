@@ -23,10 +23,6 @@ type explorerContext struct {
 }
 
 func (ec explorerContext) initExplorer() cli.BeforeFunc {
-	ec.router = mux.NewRouter().StrictSlash(true)
-
-	// Setup route handlers...
-	ec.router.HandleFunc("/block/{id}", api.HandleBlockByID).Methods("GET")
 
 	// Part of the init that depends on cmd arguments
 	return func(c *cli.Context) error {
@@ -66,6 +62,11 @@ func (ec explorerContext) startServer() cli.ActionFunc {
 		}
 
 		log.Printf("* Ebakus explorer started on http://%s", buff.String())
+
+		ec.router = mux.NewRouter().StrictSlash(true)
+
+		// Setup route handlers...
+		ec.router.HandleFunc("/block/{id}", api.HandleBlockByID).Methods("GET")
 
 		err = http.ListenAndServe(buff.String(), ec.router)
 
