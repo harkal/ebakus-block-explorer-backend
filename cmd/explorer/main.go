@@ -1,6 +1,9 @@
 package main
 
 import (
+	"bytes"
+	"html/template"
+	"log"
 	"os"
 
 	api "bitbucket.org/pantelisss/ebakus_server/api"
@@ -54,8 +57,42 @@ func main() {
 }
 
 func startServer(c *cli.Context) error {
+	templ, err := template.New("webapi_bindaddr").Parse("{{.Address}}:{{.Port}}")
+
+	if err != nil {
+		log.Println(err.Error())
+		return err
+	}
+
+	data := struct {
+		Address string
+		Port    string
+	}{
+		c.String("address"),
+		c.String("port"),
+	}
+
+	buff := new(bytes.Buffer)
+	err = templ.Execute(buff, data)
+
+	if err != nil {
+		log.Println(err.Error())
+		return err
+	}
+
+	log.Printf("* Ebakus explorer started on %s", buff.String())
+
 	router := mux.NewRouter().StrictSlash(true)
+
 	// router.HandleFunc("/blocks", getBlocks).Methods("GET")
 	router.HandleFunc("/block/{id}", api.HandleBlockByID).Methods("GET")
-	return http.ListenAndServe(":8080", router)
+
+	err = http.ListenAndServe(buff.String(), router)
+
+	if err != nil {
+		log.Println(err.Error())
+		return err
+	}
+
+	return nil
 }
