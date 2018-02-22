@@ -106,14 +106,39 @@ func main() {
 
 	app.Flags = []cli.Flag{
 		cli.StringFlag{
-			Name:  "address, a",
+			Name:  "address",
 			Usage: "Network address to bind",
 			Value: "0.0.0.0",
 		},
 		cli.StringFlag{
-			Name:  "port, p",
+			Name:  "port",
 			Usage: "Port where the API is served",
 			Value: "8080",
+		},
+		cli.StringFlag{
+			Name:  "dbhost",
+			Usage: "PostgreSQL database hostname",
+			Value: "localhost",
+		},
+		cli.IntFlag{
+			Name:  "dbport",
+			Usage: "PostgreSQL database port",
+			Value: 5432,
+		},
+		cli.StringFlag{
+			Name:  "dbname",
+			Usage: "Database name",
+			Value: "ebakus",
+		},
+		cli.StringFlag{
+			Name:  "dbuser",
+			Usage: "Database username",
+			Value: "ebakus",
+		},
+		cli.StringFlag{
+			Name:  "dbpass",
+			Usage: "Database user password",
+			Value: "",
 		},
 	}
 
