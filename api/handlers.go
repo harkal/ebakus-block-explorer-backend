@@ -1,7 +1,6 @@
 package webapi
 
 import (
-	"encoding/json"
 	"log"
 	"net/http"
 	"strconv"
@@ -49,7 +48,7 @@ func HandleBlockByID(w http.ResponseWriter, r *http.Request) {
 		}
 
 		var res []byte
-		res, err = json.Marshal(block)
+		res, err = block.MarshalJSON()
 
 		if err != nil {
 			log.Printf("! Error: %s", err.Error())
