@@ -22,16 +22,6 @@ type explorerContext struct {
 	router *mux.Router
 }
 
-func createDBClient(c *cli.Context) (*db.DBClient, error) {
-	dbname := c.String("dbname")
-	dbhost := c.String("dbhost")
-	dbport := c.Int("dbport")
-	dbuser := c.String("dbuser")
-	dbpass := c.String("dbpass")
-
-	return db.NewClient(dbname, dbhost, dbport, dbuser, dbpass)
-}
-
 func (ec explorerContext) initExplorer() cli.BeforeFunc {
 	ec.router = mux.NewRouter().StrictSlash(true)
 
@@ -41,8 +31,13 @@ func (ec explorerContext) initExplorer() cli.BeforeFunc {
 	// Part of the init that depends on cmd arguments
 	return func(c *cli.Context) error {
 		var err error
-		ec.db, err = db.NewClientByCliArguments(c)
-		return err
+		err = db.InitFromCli(c)
+		if err != nil {
+			return err
+		}
+		ec.db = db.GetClient()
+
+		return nil
 	}
 }
 

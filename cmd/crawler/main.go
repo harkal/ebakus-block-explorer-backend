@@ -26,10 +26,11 @@ func getBlock(c *cli.Context) error {
 		return err
 	}
 
-	db, err := db.NewClientByCliArguments(c)
+	err = db.InitFromCli(c)
 	if err != nil {
 		return err
 	}
+	db := db.GetClient()
 
 	block, err := db.GetBlock(uint64(number))
 	if err != nil {
@@ -102,10 +103,11 @@ func pullNewBlocks(c *cli.Context) error {
 		log.Fatal("Failed to connect to ebakus", err)
 	}
 
-	db, err := db.NewClientByCliArguments(c)
+	err = db.InitFromCli(c)
 	if err != nil {
 		log.Fatal("Failed to load db client")
 	}
+	db := db.GetClient()
 
 	last, err := ipc.GetBlockNumber()
 	if err != nil {
