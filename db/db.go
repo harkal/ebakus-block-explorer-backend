@@ -11,6 +11,7 @@ import (
 	"bitbucket.org/pantelisss/ebakus_server/models"
 
 	"github.com/lib/pq"
+	cli "gopkg.in/urfave/cli.v1"
 )
 
 type DBClient struct {
@@ -43,6 +44,16 @@ func makeConnString(name, host string, port int, user string, pass string) (stri
 	err = templ.Execute(buff, data)
 
 	return buff.String(), err
+}
+
+func NewClientByCliArguments(c *cli.Context) (*DBClient, error) {
+	dbname := c.String("dbname")
+	dbhost := c.String("dbhost")
+	dbport := c.Int("dbport")
+	dbuser := c.String("dbuser")
+	dbpass := c.String("dbpass")
+
+	return NewClient(dbname, dbhost, dbport, dbuser, dbpass)
 }
 
 func NewClient(name, host string, port int, user string, pass string) (*DBClient, error) {

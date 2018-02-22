@@ -24,7 +24,6 @@ func HandleBlockByID(w http.ResponseWriter, r *http.Request) {
 		// 	return
 		// }
 		fmt.Fprint(w, "success")
-
 	} else {
 		http.Error(w, "error", http.StatusBadRequest)
 	}

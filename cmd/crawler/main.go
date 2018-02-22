@@ -20,23 +20,13 @@ import (
 	cli "gopkg.in/urfave/cli.v1"
 )
 
-func createDBClient(c *cli.Context) (*db.DBClient, error) {
-	dbname := c.String("dbname")
-	dbhost := c.String("dbhost")
-	dbport := c.Int("dbport")
-	dbuser := c.String("dbuser")
-	dbpass := c.String("dbpass")
-
-	return db.NewClient(dbname, dbhost, dbport, dbuser, dbpass)
-}
-
 func getBlock(c *cli.Context) error {
 	number, err := strconv.Atoi(c.Args().Get(0))
 	if err != nil {
 		return err
 	}
 
-	db, err := createDBClient(c)
+	db, err := db.NewClientByCliArguments(c)
 	if err != nil {
 		return err
 	}
@@ -112,7 +102,7 @@ func pullNewBlocks(c *cli.Context) error {
 		log.Fatal("Failed to connect to ebakus", err)
 	}
 
-	db, err := createDBClient(c)
+	db, err := db.NewClientByCliArguments(c)
 	if err != nil {
 		log.Fatal("Failed to load db client")
 	}

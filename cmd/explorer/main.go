@@ -7,7 +7,7 @@ import (
 	"os"
 
 	api "bitbucket.org/pantelisss/ebakus_server/api"
-	_ "bitbucket.org/pantelisss/ebakus_server/db"
+	"bitbucket.org/pantelisss/ebakus_server/db"
 	// "encoding/json"
 
 	"net/http"
@@ -16,6 +16,72 @@ import (
 
 	cli "gopkg.in/urfave/cli.v1"
 )
+
+type explorerContext struct {
+	db     *db.DBClient
+	router *mux.Router
+}
+
+func createDBClient(c *cli.Context) (*db.DBClient, error) {
+	dbname := c.String("dbname")
+	dbhost := c.String("dbhost")
+	dbport := c.Int("dbport")
+	dbuser := c.String("dbuser")
+	dbpass := c.String("dbpass")
+
+	return db.NewClient(dbname, dbhost, dbport, dbuser, dbpass)
+}
+
+func (ec explorerContext) initExplorer() cli.BeforeFunc {
+	ec.router = mux.NewRouter().StrictSlash(true)
+
+	// Setup route handlers...
+	ec.router.HandleFunc("/block/{id}", api.HandleBlockByID).Methods("GET")
+
+	// Part of the init that depends on cmd arguments
+	return func(c *cli.Context) error {
+		var err error
+		ec.db, err = db.NewClientByCliArguments(c)
+		return err
+	}
+}
+
+func (ec explorerContext) startServer() cli.ActionFunc {
+	templ, err := template.New("webapi_bindaddr").Parse("{{.Address}}:{{.Port}}")
+
+	if err != nil {
+		log.Println(err.Error())
+	}
+
+	// Part of the init that depends on cmd arguments
+	return func(c *cli.Context) error {
+		data := struct {
+			Address string
+			Port    string
+		}{
+			c.String("address"),
+			c.String("port"),
+		}
+
+		buff := new(bytes.Buffer)
+		err = templ.Execute(buff, data)
+
+		if err != nil {
+			log.Println(err.Error())
+		}
+
+		log.Printf("* Ebakus explorer started on http://%s", buff.String())
+
+		err = http.ListenAndServe(buff.String(), ec.router)
+
+		if err != nil {
+			log.Println(err.Error())
+			return err
+		}
+
+		return nil
+	}
+}
 
 func main() {
 	app := cli.NewApp()
@@ -51,48 +117,10 @@ func main() {
 		},
 	}
 
-	app.Action = startServer
+	var ctx explorerContext
+
+	app.Before = ctx.initExplorer()
+	app.Action = ctx.startServer()
 
 	app.Run(os.Args)
-}
-
-func startServer(c *cli.Context) error {
-	templ, err := template.New("webapi_bindaddr").Parse("{{.Address}}:{{.Port}}")
-
-	if err != nil {
-		log.Println(err.Error())
-		return err
-	}
-
-	data := struct {
-		Address string
-		Port    string
-	}{
-		c.String("address"),
-		c.String("port"),
-	}
-
-	buff := new(bytes.Buffer)
-	err = templ.Execute(buff, data)
-
-	if err != nil {
-		log.Println(err.Error())
-		return err
-	}
-
-	log.Printf("* Ebakus explorer started on %s", buff.String())
-
-	router := mux.NewRouter().StrictSlash(true)
-
-	// router.HandleFunc("/blocks", getBlocks).Methods("GET")
-	router.HandleFunc("/block/{id}", api.HandleBlockByID).Methods("GET")
-
-	err = http.ListenAndServe(buff.String(), router)
-
-	if err != nil {
-		log.Println(err.Error())
-		return err
-	}
-
-	return nil
 }
