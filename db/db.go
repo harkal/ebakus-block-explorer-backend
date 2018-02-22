@@ -11,11 +11,14 @@ import (
 	"bitbucket.org/pantelisss/ebakus_server/models"
 
 	"github.com/lib/pq"
+	cli "gopkg.in/urfave/cli.v1"
 )
 
 type DBClient struct {
 	db *sql.DB
 }
+
+var client *DBClient
 
 func makeConnString(name, host string, port int, user string, pass string) (string, error) {
 	templ, err := template.New("psql_connection_string").Parse("postgres://{{.User}}:{{.Pass}}@{{.Host}}:{{.Port}}/{{.Name}}?sslmode=disable")
@@ -45,12 +48,22 @@ func makeConnString(name, host string, port int, user string, pass string) (stri
 	return buff.String(), err
 }
 
-func NewClient(name, host string, port int, user string, pass string) (*DBClient, error) {
+func InitFromCli(c *cli.Context) error {
+	dbname := c.String("dbname")
+	dbhost := c.String("dbhost")
+	dbport := c.Int("dbport")
+	dbuser := c.String("dbuser")
+	dbpass := c.String("dbpass")
+
+	return Init(dbname, dbhost, dbport, dbuser, dbpass)
+}
+
+func Init(name, host string, port int, user string, pass string) error {
 	conn, err := makeConnString(name, host, port, user, pass)
 
 	if err != nil {
 		log.Println(err.Error())
-		return nil, err
+		return err
 	}
 
 	fmt.Println(conn)
@@ -58,13 +71,13 @@ func NewClient(name, host string, port int, user string, pass string) (*DBClient
 
 	if err != nil {
 		log.Println(err.Error())
-		return nil, err
+		return err
 	}
 
 	err = tdb.Ping()
 	if err != nil {
 		log.Println(err.Error())
-		return nil, err
+		return err
 	}
 
 	// Check if all required tables exist
@@ -72,7 +85,7 @@ func NewClient(name, host string, port int, user string, pass string) (*DBClient
 
 	if err != nil {
 		log.Println(err.Error())
-		return nil, err
+		return err
 	}
 	defer rows.Close()
 
@@ -80,15 +93,21 @@ func NewClient(name, host string, port int, user string, pass string) (*DBClient
 	rows.Next()
 	if err := rows.Scan(&tableExists); err != nil {
 		log.Println(err.Error())
-		return nil, err
+		return err
 	}
 
 	if !tableExists {
 		log.Println("Missing table: blocks. Make sure all required tables are created.")
-		return nil, errors.New("Missing table: blocks")
+		return errors.New("Missing table: blocks")
 	}
 
-	return &DBClient{tdb}, nil
+	client = &DBClient{tdb}
+
+	return nil
+}
+
+func GetClient() *DBClient {
+	return client
 }
 
 func (cli *DBClient) GetLatestBlockNumber() (uint64, error) {

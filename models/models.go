@@ -27,7 +27,7 @@ type Block struct {
 
 type JSONBlock Block
 
-func (b JSONBlock) MarshalJSON() ([]byte, error) {
+func (b Block) MarshalJSON() ([]byte, error) {
 	type Block struct {
 		Number           uint64      `json:"number"`
 		TimeStamp        uint64      `json:"timestamp"`
