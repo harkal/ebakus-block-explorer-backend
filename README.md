@@ -22,4 +22,4 @@ To use the crawler run:
 
 To start the explorer (webapi) run:
 
-`$ $GOPATH/bin/ebakus_explorer`
+`$ $GOPATH/bin/ebakus_explorer --dbname YOUR_DB_NAME --dbuser YOUR_DB_USER --dbpass YOUR_DB_PASS`
