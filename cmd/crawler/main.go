@@ -32,7 +32,7 @@ func getBlock(c *cli.Context) error {
 	}
 	db := db.GetClient()
 
-	block, err := db.GetBlock(uint64(number))
+	block, err := db.GetBlockByID(uint64(number))
 	if err != nil {
 		return err
 	}

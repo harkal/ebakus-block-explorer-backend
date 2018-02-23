@@ -1,6 +1,7 @@
 package webapi
 
 import (
+	"errors"
 	"log"
 	"net/http"
 	"strconv"
@@ -13,7 +14,12 @@ import (
 )
 
 // HandleBlockByID finds and returns block data by id
-func HandleBlockByID(w http.ResponseWriter, r *http.Request) {
+func HandleBlock(w http.ResponseWriter, r *http.Request) {
+	if r.Method != "GET" {
+		http.Error(w, "error", http.StatusBadRequest)
+		return
+	}
+
 	dbc := db.GetClient()
 	if dbc == nil {
 		log.Printf("! Error: DBClient is not initialized!")
@@ -24,19 +30,22 @@ func HandleBlockByID(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
 	vars := mux.Vars(r)
-	id, err := strconv.ParseUint(vars["id"], 10, 64)
 
-	if err != nil {
-		log.Printf("! Error: %s", err.Error())
-		http.Error(w, "error", http.StatusBadRequest)
-		return
-	}
+	var block *models.Block
 
-	log.Println("Request for:", id)
+	if len(vars["param"]) > 2 && vars["param"][1] == 'x' {
+		// Case 1: The parameter is Hash
+		hash, ok := vars["param"]
 
-	if r.Method == "GET" {
-		var block *models.Block
-		block, err = dbc.GetBlock(id)
+		if !ok {
+			log.Printf("! Error: %s", errors.New("Parameter is n"))
+			http.Error(w, "error", http.StatusBadRequest)
+			return
+		}
+
+		log.Println("Request Block by Hash:", hash)
+		var err error
+		block, err = dbc.GetBlockByHash(hash)
 
 		if err != nil {
 			log.Printf("! Error: %s", err.Error())
@@ -46,17 +55,35 @@ func HandleBlockByID(w http.ResponseWriter, r *http.Request) {
 		if block == nil {
 			http.Error(w, "error", http.StatusNotFound)
 		}
+	} else {
+		// Case 2: The parameter is ID
+		id, err := strconv.ParseUint(vars["param"], 10, 64)
 
-		var res []byte
-		res, err = block.MarshalJSON()
+		if err != nil {
+			log.Printf("! Error: %s", err.Error())
+			http.Error(w, "error", http.StatusBadRequest)
+			return
+		}
+
+		log.Println("Request Block by ID:", id)
+		block, err = dbc.GetBlockByID(id)
 
 		if err != nil {
 			log.Printf("! Error: %s", err.Error())
 			http.Error(w, "error", http.StatusInternalServerError)
-		} else {
-			w.Write(res)
 		}
+
+		if block == nil {
+			http.Error(w, "error", http.StatusNotFound)
+		}
+	}
+
+	res, err := block.MarshalJSON()
+
+	if err != nil {
+		log.Printf("! Error: %s", err.Error())
+		http.Error(w, "error", http.StatusInternalServerError)
 	} else {
-		http.Error(w, "error", http.StatusBadRequest)
+		w.Write(res)
 	}
 }
