@@ -10,3 +10,5 @@ CREATE TABLE blocks (
   gas_used BIGINT,
   gas_limit BIGINT
 );
+
+CREATE INDEX CONCURRENTLY blockhash_idx ON blocks USING btree (hash);

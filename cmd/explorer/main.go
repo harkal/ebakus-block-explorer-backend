@@ -8,7 +8,6 @@ import (
 
 	api "bitbucket.org/pantelisss/ebakus_server/api"
 	"bitbucket.org/pantelisss/ebakus_server/db"
-	// "encoding/json"
 
 	"net/http"
 
@@ -66,7 +65,7 @@ func (ec explorerContext) startServer() cli.ActionFunc {
 		ec.router = mux.NewRouter().StrictSlash(true)
 
 		// Setup route handlers...
-		ec.router.HandleFunc("/block/{id}", api.HandleBlockByID).Methods("GET")
+		ec.router.HandleFunc("/block/{param}", api.HandleBlock).Methods("GET")
 
 		err = http.ListenAndServe(buff.String(), ec.router)
 

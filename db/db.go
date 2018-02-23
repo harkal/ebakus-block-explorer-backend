@@ -6,10 +6,12 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"strings"
 	"text/template"
 
 	"bitbucket.org/pantelisss/ebakus_server/models"
 
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/lib/pq"
 	cli "gopkg.in/urfave/cli.v1"
 )
@@ -128,7 +130,7 @@ func (cli *DBClient) GetLatestBlockNumber() (uint64, error) {
 	return maxNumber, nil
 }
 
-func (cli *DBClient) GetBlock(number uint64) (*models.Block, error) {
+func (cli *DBClient) GetBlockByID(number uint64) (*models.Block, error) {
 	rows, err := cli.db.Query("SELECT * FROM blocks WHERE number = $1", number)
 	if err != nil {
 		return nil, err
@@ -155,6 +157,51 @@ func (cli *DBClient) GetBlock(number uint64) (*models.Block, error) {
 	}
 
 	block.Hash.SetBytes(hash)
+	block.ParentHash.SetBytes(parentHash)
+	block.StateRoot.SetBytes(stateRoot)
+	block.TransactionsRoot.SetBytes(transactionsRoot)
+	block.ReceiptsRoot.SetBytes(receiptsRoot)
+
+	return &block, nil
+}
+
+func (cli *DBClient) GetBlockByHash(hash string) (*models.Block, error) {
+	// Query for bytea value with the hex method, pass from char [1,end) since
+	// the required structure is E'\\xDEADBEEF'
+	// For more, check https://www.postgresql.org/docs/9.0/static/datatype-binary.html
+	query := strings.Join([]string{"SELECT * FROM blocks WHERE hash = E'\\\\", hash[1:], "'"}, "")
+	rows, err := cli.db.Query(query)
+
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var block models.Block
+
+	var originalHash, parentHash, stateRoot, transactionsRoot, receiptsRoot []byte
+
+	rows.Next()
+	rows.Scan(&block.Number,
+		&block.TimeStamp,
+		&originalHash,
+		&parentHash,
+		&stateRoot,
+		&transactionsRoot,
+		&receiptsRoot,
+		&block.Size,
+		&block.GasUsed,
+		&block.GasLimit)
+	if err = rows.Err(); err != nil {
+		return nil, err
+	}
+
+	cmpHash := strings.Join([]string{"0x", common.Bytes2Hex(originalHash)}, "")
+	if strings.Compare(hash, cmpHash) != 0 {
+		return nil, errors.New("wrong block found")
+	}
+
+	block.Hash = common.StringToHash(hash)
 	block.ParentHash.SetBytes(parentHash)
 	block.StateRoot.SetBytes(stateRoot)
 	block.TransactionsRoot.SetBytes(transactionsRoot)
