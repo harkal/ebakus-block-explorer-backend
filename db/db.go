@@ -50,6 +50,8 @@ func makeConnString(name, host string, port int, user string, pass string) (stri
 	return buff.String(), err
 }
 
+// InitFromCli is the same as Init but receives it's parameters
+// from a Context struct of the cli package (aka from program arguments)
 func InitFromCli(c *cli.Context) error {
 	dbname := c.String("dbname")
 	dbhost := c.String("dbhost")
@@ -60,6 +62,9 @@ func InitFromCli(c *cli.Context) error {
 	return Init(dbname, dbhost, dbport, dbuser, dbpass)
 }
 
+// Init creates a connection to the database and runs any
+// checks necessary to ensure the module is ready to execute
+// queries.
 func Init(name, host string, port int, user string, pass string) error {
 	conn, err := makeConnString(name, host, port, user, pass)
 
@@ -108,10 +113,15 @@ func Init(name, host string, port int, user string, pass string) error {
 	return nil
 }
 
+// GetClient returns the current DBClient instance.
+// Dev Commentary: I'm sorry for this but I needed a way to have
+// the DBClient available throughout the project. If you know
+// a better way to do this I'd like to know it too.
 func GetClient() *DBClient {
 	return client
 }
 
+// GetLatestBlockNumber returns the most recent block id (aka number)
 func (cli *DBClient) GetLatestBlockNumber() (uint64, error) {
 	rows, err := cli.db.Query("SELECT max(number) FROM blocks")
 	if err != nil {
@@ -130,6 +140,7 @@ func (cli *DBClient) GetLatestBlockNumber() (uint64, error) {
 	return maxNumber, nil
 }
 
+// GetBlockByID finds and returns the block with the provided ID
 func (cli *DBClient) GetBlockByID(number uint64) (*models.Block, error) {
 	rows, err := cli.db.Query("SELECT * FROM blocks WHERE number = $1", number)
 	if err != nil {
@@ -165,6 +176,7 @@ func (cli *DBClient) GetBlockByID(number uint64) (*models.Block, error) {
 	return &block, nil
 }
 
+// GetBlockByHash finds and returns the block with the provided Hash
 func (cli *DBClient) GetBlockByHash(hash string) (*models.Block, error) {
 	// Query for bytea value with the hex method, pass from char [1,end) since
 	// the required structure is E'\\xDEADBEEF'
@@ -210,6 +222,7 @@ func (cli *DBClient) GetBlockByHash(hash string) (*models.Block, error) {
 	return &block, nil
 }
 
+// InsertTransactions adds a number of Transactions in the database
 func (cli *DBClient) InsertTransactions(txs []*models.Transaction) error {
 	if len(txs) == 0 {
 		return nil
@@ -218,6 +231,7 @@ func (cli *DBClient) InsertTransactions(txs []*models.Transaction) error {
 	return nil
 }
 
+// InsertBlocks adds a number of Blocks in the database
 func (cli *DBClient) InsertBlocks(blocks []*models.Block) error {
 	if len(blocks) == 0 {
 		return nil
