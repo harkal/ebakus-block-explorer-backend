@@ -12,3 +12,19 @@ CREATE TABLE blocks (
 );
 
 CREATE INDEX CONCURRENTLY blockhash_idx ON blocks USING btree (hash);
+
+CREATE TABLE transactions (
+  hash bytea PRIMARY KEY,
+  nonce BIGINT,
+  block_hash bytea,
+  block_number BIGINT,
+  tx_index BIGINT,
+  addr_from bytea,
+  addr_to bytea,
+  value BIGINT,
+  gas_price BIGINT,
+  gas BIGINT
+);
+
+CREATE INDEX CONCURRENTLY txfrom_idx ON transactions USING btree (addr_from);
+CREATE INDEX CONCURRENTLY txto_idx ON transactions USING btree (addr_to);
