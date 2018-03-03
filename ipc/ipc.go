@@ -109,11 +109,13 @@ func (ipc *IPCInterface) StreamBlocks(bCh chan *models.Block, tCh chan *common.H
 		if err != nil {
 			return err
 		}
-		bCh <- bl
 
 		for _, tx := range bl.Transactions {
-			tCh <- &tx
+			txHash := common.StringToHash(tx)
+			tCh <- &txHash
 		}
+
+		bCh <- bl
 	}
 
 	if atomic.AddInt64(ops, -1) == 0 {

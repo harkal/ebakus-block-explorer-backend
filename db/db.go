@@ -227,7 +227,7 @@ func (cli *DBClient) InsertTransactions(txs []*models.Transaction) error {
 	if len(txs) == 0 {
 		return nil
 	}
-	log.Println("Insert transaction", len(txs))
+	log.Println("Inserting", len(txs), "transactions")
 	return nil
 }
 

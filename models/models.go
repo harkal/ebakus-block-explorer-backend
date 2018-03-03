@@ -21,7 +21,7 @@ type Block struct {
 	Size             hexutil.Uint64 `json:"size"`
 	GasUsed          hexutil.Uint64 `json:"gasUsed"`
 	GasLimit         hexutil.Uint64 `json:"gasLimit"`
-	Transactions     []common.Hash  `json:"transactions"`
+	Transactions     []string       `json:"transactions"`
 	LogsBloom        types.Bloom    `json:"logBloom"`
 }
 

@@ -83,17 +83,21 @@ func streamInsertBlocks(db *db.DBClient, ch chan *models.Block) (int, error) {
 }
 
 func streamInsertTransactions(db *db.DBClient, txsCh chan *models.Transaction) {
-	txs := make([]*models.Transaction, 0, 400)
-	for t := range txsCh {
+	const txsBufferSize = 5
+	txs := make([]*models.Transaction, 0, txsBufferSize)
 
+	for t := range txsCh {
 		if len(txsCh) >= 512 {
 			log.Println("Chocking on transactions", len(txsCh))
 		}
-		txs = append(txs, t)
-		db.InsertTransactions(txs[:])
-		txs = make([]*models.Transaction, 0, 400)
+
+		if len(txs) >= txsBufferSize {
+			db.InsertTransactions(txs[:])
+			txs = make([]*models.Transaction, 0, txsBufferSize)
+		} else {
+			txs = append(txs, t)
+		}
 	}
-	db.InsertTransactions(txs[:])
 }
 
 func pullNewBlocks(c *cli.Context) error {
