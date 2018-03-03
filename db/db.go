@@ -223,11 +223,66 @@ func (cli *DBClient) GetBlockByHash(hash string) (*models.Block, error) {
 }
 
 // InsertTransactions adds a number of Transactions in the database
-func (cli *DBClient) InsertTransactions(txs []*models.Transaction) error {
-	if len(txs) == 0 {
+func (cli *DBClient) InsertTransactions(transactions []*models.Transaction) error {
+	if len(transactions) == 0 {
 		return nil
 	}
-	log.Println("Inserting", len(txs), "transactions")
+
+	txn, err := cli.db.Begin()
+	if err != nil {
+		return err
+	}
+
+	stmt, err := txn.Prepare(pq.CopyIn("transactions",
+		"hash",
+		"nonce",
+		"block_hash",
+		"block_number",
+		"tx_index",
+		"addr_from",
+		"addr_to",
+		"value",
+		"gas_price",
+		"gas"))
+
+	if err != nil {
+		return err
+	}
+
+	for _, tx := range transactions {
+		_, err := stmt.Exec(
+			tx.Hash.Bytes(),
+			tx.Nonce,
+			tx.BlockHash.Bytes(),
+			tx.BlockNumber,
+			tx.TransactionIndex,
+			tx.From.Bytes(),
+			tx.To.Bytes(),
+			tx.Value,
+			tx.Gas,
+			tx.GasPrice,
+		)
+
+		if err != nil {
+			log.Println(err.Error())
+		}
+	}
+
+	_, err = stmt.Exec()
+	if err != nil {
+		log.Println(err.Error())
+	}
+
+	err = stmt.Close()
+	if err != nil {
+		log.Println(err.Error())
+	}
+
+	err = txn.Commit()
+	if err != nil {
+		log.Println(err.Error())
+	}
+
 	return nil
 }
 
