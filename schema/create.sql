@@ -23,7 +23,8 @@ CREATE TABLE transactions (
   addr_to bytea,
   value BIGINT,
   gas_price BIGINT,
-  gas BIGINT
+  gas BIGINT,
+  input bytea
 );
 
 CREATE INDEX CONCURRENTLY txfrom_idx ON transactions USING btree (addr_from);

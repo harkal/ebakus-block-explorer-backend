@@ -110,12 +110,11 @@ func (ipc *IPCInterface) StreamBlocks(bCh chan *models.Block, tCh chan *common.H
 			return err
 		}
 
-		for _, tx := range bl.Transactions {
-			txHash := common.StringToHash(tx)
-			tCh <- &txHash
-		}
-
 		bCh <- bl
+
+		for _, tx := range bl.Transactions {
+			tCh <- &tx
+		}
 	}
 
 	if atomic.AddInt64(ops, -1) == 0 {
@@ -127,12 +126,12 @@ func (ipc *IPCInterface) StreamBlocks(bCh chan *models.Block, tCh chan *common.H
 }
 
 func (ipc *IPCInterface) GetTransactionByHash(hash *common.Hash) (*models.Transaction, error) {
-	var tr models.Transaction
+	var tx models.Transaction
 
-	err := ipc.cli.Call(&tr, "eth_getTransactionByHash", hash)
+	err := ipc.cli.Call(&tx, "eth_getTransactionByHash", hash.String())
 	if err != nil {
 		return nil, err
 	}
 
-	return &tr, nil
+	return &tx, nil
 }

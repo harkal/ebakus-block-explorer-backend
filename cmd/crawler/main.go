@@ -55,20 +55,24 @@ func expandHome(path string) string {
 }
 
 func streamInsertBlocks(db *db.DBClient, ch chan *models.Block) (int, error) {
+	const bufSize = 400
 	count := 0
-	blocks := make([]*models.Block, 0, 400)
+	blocks := make([]*models.Block, 0, bufSize)
+
 	for block := range ch {
 		if len(ch) >= 512 {
 			log.Println("Chocking ", block.Number, len(ch))
 		}
+
 		blocks = append(blocks, block)
-		if len(blocks) >= 400 {
+
+		if len(blocks) >= bufSize {
 			err := db.InsertBlocks(blocks[:])
 			if err != nil {
 				return 0, err
 			}
 			count = count + len(blocks)
-			blocks = make([]*models.Block, 0, 400)
+			blocks = make([]*models.Block, 0, bufSize)
 		}
 	}
 
@@ -83,21 +87,33 @@ func streamInsertBlocks(db *db.DBClient, ch chan *models.Block) (int, error) {
 }
 
 func streamInsertTransactions(db *db.DBClient, txsCh chan *models.Transaction) {
-	const txsBufferSize = 5
-	txs := make([]*models.Transaction, 0, txsBufferSize)
+	const bufSize = 5
+	count := 0
+	txs := make([]*models.Transaction, 0, bufSize)
 
 	for t := range txsCh {
 		if len(txsCh) >= 512 {
-			log.Println("Chocking on transactions", len(txsCh))
+			log.Println("Chocking on transactions", t.Hash, len(txsCh))
 		}
 
-		if len(txs) >= txsBufferSize {
-			db.InsertTransactions(txs[:])
-			txs = make([]*models.Transaction, 0, txsBufferSize)
-		} else {
-			txs = append(txs, t)
+		txs = append(txs, t)
+
+		if len(txs) >= bufSize {
+			err := db.InsertTransactions(txs[:])
+			if err != nil {
+				log.Println("Error streamInsertTransactions", err.Error())
+			}
+			count = count + len(txs)
+			txs = make([]*models.Transaction, 0, bufSize)
 		}
 	}
+
+	err := db.InsertTransactions(txs[:])
+	if err != nil {
+		log.Println("Error streamInsertTransactions", err.Error())
+	}
+	count = count + len(txs)
+	fmt.Println("Finished inserting", count, "transactions")
 }
 
 func pullNewBlocks(c *cli.Context) error {

@@ -21,7 +21,7 @@ type Block struct {
 	Size             hexutil.Uint64 `json:"size"`
 	GasUsed          hexutil.Uint64 `json:"gasUsed"`
 	GasLimit         hexutil.Uint64 `json:"gasLimit"`
-	Transactions     []string       `json:"transactions"`
+	Transactions     []common.Hash  `json:"transactions"`
 	LogsBloom        types.Bloom    `json:"logBloom"`
 }
 
@@ -59,25 +59,15 @@ func (b Block) MarshalJSON() ([]byte, error) {
 }
 
 type Transaction struct {
-	Hash             common.Hash              `json:"hash"`
-	Nonce            hexutil.Uint64           `json:"nonce"`
-	BlockHash        common.Hash              `json:"blockHash"`
-	BlockNumber      hexutil.Uint64           `json:"blockNumber"`
-	TransactionIndex hexutil.Uint64           `json:"txIndex"`
-	From             common.UnprefixedAddress `json:"from"`
-	To               common.UnprefixedAddress `json:"to"`
-	Value            hexutil.Uint64           `json:"value"`
-	GasPrice         hexutil.Uint64           `json:"gasPrice"`
-	Gas              hexutil.Uint64           `json:"gas"`
-	//TODO: Find type for input
-	//	Input				TYPE?
-}
-
-// MarshalJSON converts a Transaction to a byte array
-// that contains it's data in JSON format.
-func (b Transaction) MarshalJSON() ([]byte, error) {
-	// Transactions don't need a subset of the fields
-	// currently, so we don't have to follow a similar
-	// procedure like the Block marshalling.
-	return json.Marshal(&b)
+	Hash             common.Hash    `json:"hash"`
+	Nonce            hexutil.Uint64 `json:"nonce"`
+	BlockHash        common.Hash    `json:"blockHash"`
+	BlockNumber      hexutil.Uint64 `json:"blockNumber"`
+	TransactionIndex hexutil.Uint64 `json:"transactionIndex"`
+	From             common.Address `json:"from"`
+	To               common.Address `json:"to"`
+	Value            hexutil.Uint64 `json:"value"`
+	Gas              hexutil.Uint64 `json:"gas"`
+	GasPrice         hexutil.Uint64 `json:"gasPrice"`
+	// Input            []byte         `json:"input"` // Causes error during JSON unmarshaling
 }
