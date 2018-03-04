@@ -71,3 +71,34 @@ type Transaction struct {
 	GasPrice         hexutil.Uint64 `json:"gasPrice"`
 	// Input            []byte         `json:"input"` // Causes error during JSON unmarshaling
 }
+
+// MarshalJSON converts a Transaction to a byte array
+// that contains it's data in JSON format.
+func (t Transaction) MarshalJSON() ([]byte, error) {
+	// Struct with only the fields we want in the final JSON?
+	var enc struct {
+		Hash             common.Hash    `json:"hash"`
+		Nonce            uint64         `json:"nonce"`
+		BlockHash        common.Hash    `json:"blockHash"`
+		BlockNumber      uint64         `json:"blockNumber"`
+		TransactionIndex uint64         `json:"transactionIndex"`
+		From             common.Address `json:"from"`
+		To               common.Address `json:"to"`
+		Value            uint64         `json:"value"`
+		Gas              uint64         `json:"gas"`
+		GasPrice         uint64         `json:"gasPrice"`
+	}
+
+	enc.Hash = t.Hash
+	enc.Nonce = uint64(t.Nonce)
+	enc.BlockHash = t.BlockHash
+	enc.BlockNumber = uint64(t.BlockNumber)
+	enc.TransactionIndex = uint64(t.TransactionIndex)
+	enc.From = t.From
+	enc.To = t.To
+	enc.Value = uint64(t.Value)
+	enc.Gas = uint64(t.Gas)
+	enc.GasPrice = uint64(t.GasPrice)
+
+	return json.Marshal(&enc)
+}

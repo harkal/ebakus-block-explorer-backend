@@ -222,6 +222,52 @@ func (cli *DBClient) GetBlockByHash(hash string) (*models.Block, error) {
 	return &block, nil
 }
 
+// GetTransactionByHash finds and returns the block with the provided Hash
+func (cli *DBClient) GetTransactionByHash(hash string) (*models.Transaction, error) {
+	// Query for bytea value with the hex method, pass from char [1,end) since
+	// the required structure is E'\\xDEADBEEF'
+	// For more, check https://www.postgresql.org/docs/9.0/static/datatype-binary.html
+	query := strings.Join([]string{"SELECT * FROM transactions WHERE hash = E'\\\\", hash[1:], "'"}, "")
+	fmt.Println(query)
+	rows, err := cli.db.Query(query)
+
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var tx models.Transaction
+
+	var originalHash, blockHash, addrfrom, addrto []byte
+
+	rows.Next()
+	rows.Scan(&originalHash,
+		&tx.Nonce,
+		&blockHash,
+		&tx.BlockNumber,
+		&tx.TransactionIndex,
+		&addrfrom,
+		&addrto,
+		&tx.Value,
+		&tx.Gas,
+		&tx.GasPrice)
+	if err = rows.Err(); err != nil {
+		return nil, err
+	}
+
+	// cmpHash := strings.Join([]string{"0x", common.Bytes2Hex(originalHash)}, "")
+	// if strings.Compare(hash, cmpHash) != 0 {
+	// 	return nil, errors.New("wrong transaction found")
+	// }
+
+	tx.Hash = common.BytesToHash(originalHash)
+	tx.BlockHash.SetBytes(blockHash)
+	tx.From.SetBytes(addrfrom)
+	tx.To.SetBytes(addrto)
+
+	return &tx, nil
+}
+
 // InsertTransactions adds a number of Transactions in the database
 func (cli *DBClient) InsertTransactions(transactions []models.Transaction) error {
 	if len(transactions) == 0 {
@@ -250,7 +296,7 @@ func (cli *DBClient) InsertTransactions(transactions []models.Transaction) error
 	}
 
 	for _, tx := range transactions {
-		// log.Println("Adding", tx.BlockNumber, tx.TransactionIndex)
+		log.Println("Adding", tx.BlockNumber, tx.TransactionIndex)
 		_, err := stmt.Exec(
 			tx.Hash.Bytes(),
 			tx.Nonce,
@@ -263,10 +309,6 @@ func (cli *DBClient) InsertTransactions(transactions []models.Transaction) error
 			tx.Gas,
 			tx.GasPrice,
 		)
-
-		if tx.BlockNumber == 174950 {
-			fmt.Println(">>>> 174950 TX", tx.Hash.String())
-		}
 
 		if err != nil {
 			log.Println("Error on Block", tx.BlockNumber, err.Error())
