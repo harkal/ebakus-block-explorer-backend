@@ -87,7 +87,7 @@ func streamInsertBlocks(db *db.DBClient, ch chan *models.Block) (int, error) {
 }
 
 func streamInsertTransactions(db *db.DBClient, txsCh <-chan models.Transaction) {
-	const bufSize = 400
+	const bufSize = 20
 	count := 0
 	txs := make([]models.Transaction, 0, bufSize)
 
