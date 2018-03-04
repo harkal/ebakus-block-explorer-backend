@@ -270,7 +270,7 @@ func (cli *DBClient) GetTransactionByHash(hash string) (*models.Transaction, err
 
 // GetTransactionByAddress finds and returns the transaction with the provided address
 // as source (FROM) or destination (TO)
-func (cli *DBClient) GetTransactionByAddress(address string, addrtype models.AddressType) (*models.Transaction, error) {
+func (cli *DBClient) GetTransactionsByAddress(address string, addrtype models.AddressType) ([]models.Transaction, error) {
 	// Query for bytea value with the hex method, pass from char [1,end) since
 	// the required structure is E'\\xDEADBEEF'
 	// For more, check https://www.postgresql.org/docs/9.0/static/datatype-binary.html
@@ -287,42 +287,46 @@ func (cli *DBClient) GetTransactionByAddress(address string, addrtype models.Add
 	}
 	defer rows.Close()
 
-	var tx models.Transaction
+	var result []models.Transaction
 
-	var originalHash, blockHash, addrfrom, addrto, input []byte
+	for rows.Next() {
+		var tx models.Transaction
+		var originalHash, blockHash, addrfrom, addrto, input []byte
 
-	rows.Next()
-	rows.Scan(&originalHash,
-		&tx.Nonce,
-		&blockHash,
-		&tx.BlockNumber,
-		&tx.TransactionIndex,
-		&addrfrom,
-		&addrto,
-		&tx.Value,
-		&tx.Gas,
-		&tx.GasPrice,
-		&input)
-	if err = rows.Err(); err != nil {
-		return nil, err
+		rows.Scan(&originalHash,
+			&tx.Nonce,
+			&blockHash,
+			&tx.BlockNumber,
+			&tx.TransactionIndex,
+			&addrfrom,
+			&addrto,
+			&tx.Value,
+			&tx.Gas,
+			&tx.GasPrice,
+			&input)
+		if err = rows.Err(); err != nil {
+			return nil, err
+		}
+
+		var cmpAddr string
+		if addrtype == models.ADDRESS_TO {
+			cmpAddr = strings.Join([]string{"0x", common.Bytes2Hex(addrto)}, "")
+		} else {
+			cmpAddr = strings.Join([]string{"0x", common.Bytes2Hex(addrfrom)}, "")
+		}
+		if strings.Compare(address, cmpAddr) != 0 {
+			return nil, errors.New("wrong transaction found")
+		}
+
+		tx.Hash = common.BytesToHash(originalHash)
+		tx.BlockHash.SetBytes(blockHash)
+		tx.From.SetBytes(addrfrom)
+		tx.To.SetBytes(addrto)
+
+		result = append(result, tx)
 	}
 
-	var cmpAddr string
-	if addrtype == models.ADDRESS_TO {
-		cmpAddr = strings.Join([]string{"0x", common.Bytes2Hex(addrto)}, "")
-	} else {
-		cmpAddr = strings.Join([]string{"0x", common.Bytes2Hex(addrfrom)}, "")
-	}
-	if strings.Compare(address, cmpAddr) != 0 {
-		return nil, errors.New("wrong transaction found")
-	}
-
-	tx.Hash = common.BytesToHash(originalHash)
-	tx.BlockHash.SetBytes(blockHash)
-	tx.From.SetBytes(addrfrom)
-	tx.To.SetBytes(addrto)
-
-	return &tx, nil
+	return result, nil
 }
 
 // InsertTransactions adds a number of Transactions in the database

@@ -1,6 +1,7 @@
 package webapi
 
 import (
+	"encoding/json"
 	"errors"
 	"log"
 	"net/http"
@@ -164,7 +165,7 @@ func HandleTxByAddress(w http.ResponseWriter, r *http.Request) {
 
 	vars := mux.Vars(r)
 
-	var tx *models.Transaction
+	var txs []models.Transaction
 
 	address, ok := vars["address"]
 	reference, ok := vars["ref"]
@@ -179,9 +180,9 @@ func HandleTxByAddress(w http.ResponseWriter, r *http.Request) {
 	var err error
 
 	if strings.Compare("from", reference) == 0 {
-		tx, err = dbc.GetTransactionByAddress(address, models.ADDRESS_FROM)
+		txs, err = dbc.GetTransactionsByAddress(address, models.ADDRESS_FROM)
 	} else if strings.Compare("to", reference) == 0 {
-		tx, err = dbc.GetTransactionByAddress(address, models.ADDRESS_TO)
+		txs, err = dbc.GetTransactionsByAddress(address, models.ADDRESS_TO)
 	} else {
 		http.Error(w, "error", http.StatusBadRequest)
 		return
@@ -193,12 +194,12 @@ func HandleTxByAddress(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if tx == nil {
+	if txs == nil {
 		http.Error(w, "error", http.StatusNotFound)
 		return
 	}
 
-	res, err := tx.MarshalJSON()
+	res, err := json.Marshal(txs)
 
 	if err != nil {
 		log.Printf("! Error: %s", err.Error())
