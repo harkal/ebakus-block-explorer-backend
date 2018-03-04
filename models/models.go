@@ -72,6 +72,13 @@ type Transaction struct {
 	// Input            []byte         `json:"input"` // Causes error during JSON unmarshaling
 }
 
+type AddressType int
+
+const (
+	ADDRESS_FROM AddressType = iota
+	ADDRESS_TO
+)
+
 // MarshalJSON converts a Transaction to a byte array
 // that contains it's data in JSON format.
 func (t Transaction) MarshalJSON() ([]byte, error) {
