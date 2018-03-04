@@ -1,10 +1,12 @@
 package webapi
 
 import (
+	"encoding/json"
 	"errors"
 	"log"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"bitbucket.org/pantelisss/ebakus_server/models"
 
@@ -50,10 +52,12 @@ func HandleBlock(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			log.Printf("! Error: %s", err.Error())
 			http.Error(w, "error", http.StatusInternalServerError)
+			return
 		}
 
 		if block == nil {
 			http.Error(w, "error", http.StatusNotFound)
+			return
 		}
 	} else {
 		// Case 2: The parameter is ID
@@ -71,14 +75,131 @@ func HandleBlock(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			log.Printf("! Error: %s", err.Error())
 			http.Error(w, "error", http.StatusInternalServerError)
+			return
 		}
 
 		if block == nil {
 			http.Error(w, "error", http.StatusNotFound)
+			return
 		}
 	}
 
 	res, err := block.MarshalJSON()
+
+	if err != nil {
+		log.Printf("! Error: %s", err.Error())
+		http.Error(w, "error", http.StatusInternalServerError)
+	} else {
+		w.Write(res)
+	}
+}
+
+// HandleTxByHash finds and returns a transaction by hash
+func HandleTxByHash(w http.ResponseWriter, r *http.Request) {
+	if r.Method != "GET" {
+		http.Error(w, "error", http.StatusBadRequest)
+		return
+	}
+
+	dbc := db.GetClient()
+	if dbc == nil {
+		log.Printf("! Error: DBClient is not initialized!")
+		http.Error(w, "error", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+
+	vars := mux.Vars(r)
+
+	var tx *models.Transaction
+
+	hash, ok := vars["hash"]
+
+	if !ok {
+		log.Printf("! Error: %s", errors.New("Parameter is n"))
+		http.Error(w, "error", http.StatusBadRequest)
+		return
+	}
+
+	log.Println("Request Transaction by Hash:", hash)
+	var err error
+	tx, err = dbc.GetTransactionByHash(hash)
+
+	if err != nil {
+		log.Printf("! Error: %s", err.Error())
+		http.Error(w, "error", http.StatusInternalServerError)
+		return
+	}
+
+	if tx == nil {
+		http.Error(w, "error", http.StatusNotFound)
+		return
+	}
+
+	res, err := tx.MarshalJSON()
+
+	if err != nil {
+		log.Printf("! Error: %s", err.Error())
+		http.Error(w, "error", http.StatusInternalServerError)
+	} else {
+		w.Write(res)
+	}
+}
+
+// HandleTxByAddress finds and returns a transaction by address (from or to)
+func HandleTxByAddress(w http.ResponseWriter, r *http.Request) {
+	if r.Method != "GET" {
+		http.Error(w, "error", http.StatusBadRequest)
+		return
+	}
+
+	dbc := db.GetClient()
+	if dbc == nil {
+		log.Printf("! Error: DBClient is not initialized!")
+		http.Error(w, "error", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+
+	vars := mux.Vars(r)
+
+	var txs []models.Transaction
+
+	address, ok := vars["address"]
+	reference, ok := vars["ref"]
+
+	if !ok {
+		log.Printf("! Error: %s", errors.New("Parameter is n"))
+		http.Error(w, "error", http.StatusBadRequest)
+		return
+	}
+
+	log.Println("Request Transaction by Address:", address, "-", reference)
+	var err error
+
+	if strings.Compare("from", reference) == 0 {
+		txs, err = dbc.GetTransactionsByAddress(address, models.ADDRESS_FROM)
+	} else if strings.Compare("to", reference) == 0 {
+		txs, err = dbc.GetTransactionsByAddress(address, models.ADDRESS_TO)
+	} else {
+		http.Error(w, "error", http.StatusBadRequest)
+		return
+	}
+
+	if err != nil {
+		log.Printf("! Error: %s", err.Error())
+		http.Error(w, "error", http.StatusInternalServerError)
+		return
+	}
+
+	if txs == nil {
+		http.Error(w, "error", http.StatusNotFound)
+		return
+	}
+
+	res, err := json.Marshal(txs)
 
 	if err != nil {
 		log.Printf("! Error: %s", err.Error())
