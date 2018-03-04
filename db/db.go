@@ -223,7 +223,7 @@ func (cli *DBClient) GetBlockByHash(hash string) (*models.Block, error) {
 }
 
 // InsertTransactions adds a number of Transactions in the database
-func (cli *DBClient) InsertTransactions(transactions []*models.Transaction) error {
+func (cli *DBClient) InsertTransactions(transactions []models.Transaction) error {
 	if len(transactions) == 0 {
 		return nil
 	}

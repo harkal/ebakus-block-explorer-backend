@@ -2,7 +2,6 @@ package ipc
 
 import (
 	"errors"
-	"fmt"
 	"sync/atomic"
 
 	"bitbucket.org/pantelisss/ebakus_server/models"
@@ -90,19 +89,16 @@ func (ipc *IPCInterface) GetBlocks(first, last uint64) ([]*models.Block, error) 
 	return blocks, nil
 }
 
-func (ipc *IPCInterface) StreamTransactions(tCh chan<- *models.Transaction, hashCh <-chan *common.Hash) {
+func (ipc *IPCInterface) StreamTransactions(tCh chan<- models.Transaction, hashCh <-chan common.Hash) {
 	for hash := range hashCh {
-		if tx, err := ipc.GetTransactionByHash(hash); err == nil {
-			if tx.BlockNumber == 174950 {
-				fmt.Println(">> 174950 TX", hash.String(), tx.Hash.String())
-			}
-			tCh <- tx
+		if tx, err := ipc.GetTransactionByHash(&hash); err == nil {
+			tCh <- *tx
 		}
 	}
 	close(tCh)
 }
 
-func (ipc *IPCInterface) StreamBlocks(bCh chan<- *models.Block, tCh chan<- *common.Hash, ops *int64, first, last uint64, stride, offset int) error {
+func (ipc *IPCInterface) StreamBlocks(bCh chan<- *models.Block, tCh chan<- common.Hash, ops *int64, first, last uint64, stride, offset int) error {
 	count := last - first + 1
 	if count < 0 {
 		return ErrInvalideBlockRange
@@ -117,11 +113,7 @@ func (ipc *IPCInterface) StreamBlocks(bCh chan<- *models.Block, tCh chan<- *comm
 		bCh <- bl
 
 		for _, tx := range bl.Transactions {
-			if bl.Number == 174950 {
-				fmt.Println("> 174950 TX", tx.String())
-			}
-
-			tCh <- &tx
+			tCh <- tx
 		}
 	}
 
