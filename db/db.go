@@ -228,7 +228,6 @@ func (cli *DBClient) GetTransactionByHash(hash string) (*models.Transaction, err
 	// the required structure is E'\\xDEADBEEF'
 	// For more, check https://www.postgresql.org/docs/9.0/static/datatype-binary.html
 	query := strings.Join([]string{"SELECT * FROM transactions WHERE hash = E'\\\\", hash[1:], "'"}, "")
-	fmt.Println(query)
 	rows, err := cli.db.Query(query)
 
 	if err != nil {
@@ -238,7 +237,7 @@ func (cli *DBClient) GetTransactionByHash(hash string) (*models.Transaction, err
 
 	var tx models.Transaction
 
-	var originalHash, blockHash, addrfrom, addrto []byte
+	var originalHash, blockHash, addrfrom, addrto, input []byte
 
 	rows.Next()
 	rows.Scan(&originalHash,
@@ -250,7 +249,8 @@ func (cli *DBClient) GetTransactionByHash(hash string) (*models.Transaction, err
 		&addrto,
 		&tx.Value,
 		&tx.Gas,
-		&tx.GasPrice)
+		&tx.GasPrice,
+		&input)
 	if err = rows.Err(); err != nil {
 		return nil, err
 	}
