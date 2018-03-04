@@ -250,6 +250,7 @@ func (cli *DBClient) InsertTransactions(transactions []*models.Transaction) erro
 	}
 
 	for _, tx := range transactions {
+		// log.Println("Adding", tx.BlockNumber, tx.TransactionIndex)
 		_, err := stmt.Exec(
 			tx.Hash.Bytes(),
 			tx.Nonce,
@@ -263,24 +264,28 @@ func (cli *DBClient) InsertTransactions(transactions []*models.Transaction) erro
 			tx.GasPrice,
 		)
 
+		if tx.BlockNumber == 174950 {
+			fmt.Println(">>>> 174950 TX", tx.Hash.String())
+		}
+
 		if err != nil {
-			log.Println(err.Error())
+			log.Println("Error on Block", tx.BlockNumber, err.Error())
 		}
 	}
 
 	_, err = stmt.Exec()
 	if err != nil {
-		log.Println(err.Error())
+		log.Println("PQTX Exec", err.Error())
 	}
 
 	err = stmt.Close()
 	if err != nil {
-		log.Println(err.Error())
+		log.Println("PQTX Close", err.Error())
 	}
 
 	err = txn.Commit()
 	if err != nil {
-		log.Println(err.Error())
+		log.Println("PQTX Commit", err.Error())
 	}
 
 	return nil

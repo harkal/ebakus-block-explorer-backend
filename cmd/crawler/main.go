@@ -60,9 +60,9 @@ func streamInsertBlocks(db *db.DBClient, ch chan *models.Block) (int, error) {
 	blocks := make([]*models.Block, 0, bufSize)
 
 	for block := range ch {
-		if len(ch) >= 512 {
-			log.Println("Chocking ", block.Number, len(ch))
-		}
+		// if len(ch) >= 512 {
+		// 	log.Println("Chocking ", block.Number, len(ch))
+		// }
 
 		blocks = append(blocks, block)
 
@@ -86,14 +86,18 @@ func streamInsertBlocks(db *db.DBClient, ch chan *models.Block) (int, error) {
 	return count, nil
 }
 
-func streamInsertTransactions(db *db.DBClient, txsCh chan *models.Transaction) {
-	const bufSize = 5
+func streamInsertTransactions(db *db.DBClient, txsCh <-chan *models.Transaction) {
+	const bufSize = 400
 	count := 0
 	txs := make([]*models.Transaction, 0, bufSize)
 
 	for t := range txsCh {
 		if len(txsCh) >= 512 {
 			log.Println("Chocking on transactions", t.Hash, len(txsCh))
+		}
+
+		if t.BlockNumber == 174950 {
+			fmt.Println(">>> 174950 TX", t.Hash.String())
 		}
 
 		txs = append(txs, t)
@@ -108,7 +112,7 @@ func streamInsertTransactions(db *db.DBClient, txsCh chan *models.Transaction) {
 		}
 	}
 
-	err := db.InsertTransactions(txs[:])
+	err := db.InsertTransactions(txs)
 	if err != nil {
 		log.Println("Error streamInsertTransactions", err.Error())
 	}
