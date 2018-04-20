@@ -68,7 +68,6 @@ type Transaction struct {
 	To               common.Address `json:"to"`
 	Value            hexutil.Uint64 `json:"value"`
 	Gas              hexutil.Uint64 `json:"gas"`
-	GasPrice         hexutil.Uint64 `json:"gasPrice"`
 	// Input            []byte         `json:"input"` // Causes error during JSON unmarshaling
 }
 
@@ -93,7 +92,6 @@ func (t Transaction) MarshalJSON() ([]byte, error) {
 		To               common.Address `json:"to"`
 		Value            uint64         `json:"value"`
 		Gas              uint64         `json:"gas"`
-		GasPrice         uint64         `json:"gasPrice"`
 	}
 
 	enc.Hash = t.Hash
@@ -105,7 +103,6 @@ func (t Transaction) MarshalJSON() ([]byte, error) {
 	enc.To = t.To
 	enc.Value = uint64(t.Value)
 	enc.Gas = uint64(t.Gas)
-	enc.GasPrice = uint64(t.GasPrice)
 
 	return json.Marshal(&enc)
 }

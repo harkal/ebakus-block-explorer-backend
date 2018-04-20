@@ -22,7 +22,6 @@ CREATE TABLE transactions (
   addr_from bytea,
   addr_to bytea,
   value BIGINT,
-  gas_price BIGINT,
   gas BIGINT,
   input bytea
 );

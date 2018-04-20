@@ -249,7 +249,6 @@ func (cli *DBClient) GetTransactionByHash(hash string) (*models.Transaction, err
 		&addrto,
 		&tx.Value,
 		&tx.Gas,
-		&tx.GasPrice,
 		&input)
 	if err = rows.Err(); err != nil {
 		return nil, err
@@ -302,7 +301,6 @@ func (cli *DBClient) GetTransactionsByAddress(address string, addrtype models.Ad
 			&addrto,
 			&tx.Value,
 			&tx.Gas,
-			&tx.GasPrice,
 			&input)
 		if err = rows.Err(); err != nil {
 			return nil, err
@@ -349,7 +347,6 @@ func (cli *DBClient) InsertTransactions(transactions []models.Transaction) error
 		"addr_from",
 		"addr_to",
 		"value",
-		"gas_price",
 		"gas"))
 
 	if err != nil {
@@ -368,7 +365,6 @@ func (cli *DBClient) InsertTransactions(transactions []models.Transaction) error
 			tx.To.Bytes(),
 			tx.Value,
 			tx.Gas,
-			tx.GasPrice,
 		)
 
 		if err != nil {
