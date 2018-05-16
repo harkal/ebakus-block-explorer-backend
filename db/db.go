@@ -213,7 +213,7 @@ func (cli *DBClient) GetBlockByHash(hash string) (*models.Block, error) {
 		return nil, errors.New("wrong block found")
 	}
 
-	block.Hash = common.StringToHash(hash)
+	block.Hash = common.BytesToHash([]byte(hash))
 	block.ParentHash.SetBytes(parentHash)
 	block.StateRoot.SetBytes(stateRoot)
 	block.TransactionsRoot.SetBytes(transactionsRoot)
