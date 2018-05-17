@@ -222,6 +222,45 @@ func (cli *DBClient) GetBlockByHash(hash string) (*models.Block, error) {
 	return &block, nil
 }
 
+// GetBlockByID finds and returns the block with the provided ID
+func (cli *DBClient) GetBlockRange(fromNumber, toNumber uint64) ([]models.Block, error) {
+	rows, err := cli.db.Query("SELECT * FROM blocks WHERE number >= $1 and number <= $2", fromNumber, toNumber)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var result []models.Block
+
+	for rows.Next() {
+		var block models.Block
+		var hash, parentHash, stateRoot, transactionsRoot, receiptsRoot []byte
+		rows.Scan(&block.Number,
+			&block.TimeStamp,
+			&hash,
+			&parentHash,
+			&stateRoot,
+			&transactionsRoot,
+			&receiptsRoot,
+			&block.Size,
+			&block.GasUsed,
+			&block.GasLimit)
+		if err = rows.Err(); err != nil {
+			return nil, err
+		}
+
+		block.Hash.SetBytes(hash)
+		block.ParentHash.SetBytes(parentHash)
+		block.StateRoot.SetBytes(stateRoot)
+		block.TransactionsRoot.SetBytes(transactionsRoot)
+		block.ReceiptsRoot.SetBytes(receiptsRoot)
+
+		result = append(result, block)
+	}
+
+	return result, nil
+}
+
 // GetTransactionByHash finds and returns the transaction with the provided Hash
 func (cli *DBClient) GetTransactionByHash(hash string) (*models.Transaction, error) {
 	// Query for bytea value with the hex method, pass from char [1,end) since

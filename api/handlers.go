@@ -60,7 +60,7 @@ func HandleBlock(w http.ResponseWriter, r *http.Request) {
 		}
 	} else {
 		// Case 2: The parameter is ID
-		id, err := strconv.ParseUint(vars["param"], 10, 64)
+		rawId, err := strconv.ParseInt(vars["param"], 10, 64)
 
 		if err != nil {
 			log.Printf("! Error: %s", err.Error())
@@ -68,18 +68,27 @@ func HandleBlock(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		log.Println("Request Block by ID:", id)
-		block, err = dbc.GetBlockByID(id)
+		if rawId < 0 {
+			if rawId != -1 {
+				log.Printf("! Error: Bad negative id")
+				http.Error(w, "error", http.StatusBadRequest)
+				return
+			}
+		} else {
+			id := uint64(rawId)
+			log.Println("Request Block by ID:", id)
+			block, err = dbc.GetBlockByID(id)
 
-		if err != nil {
-			log.Printf("! Error: %s", err.Error())
-			http.Error(w, "error", http.StatusInternalServerError)
-			return
-		}
+			if err != nil {
+				log.Printf("! Error: %s", err.Error())
+				http.Error(w, "error", http.StatusInternalServerError)
+				return
+			}
 
-		if block == nil {
-			http.Error(w, "error", http.StatusNotFound)
-			return
+			if block == nil {
+				http.Error(w, "error", http.StatusNotFound)
+				return
+			}
 		}
 	}
 
