@@ -161,6 +161,7 @@ func (cli *DBClient) GetBlockByID(number uint64) (*models.Block, error) {
 		&transactionsRoot,
 		&receiptsRoot,
 		&block.Size,
+		&block.TransactionCount,
 		&block.GasUsed,
 		&block.GasLimit)
 	if err = rows.Err(); err != nil {
@@ -202,6 +203,7 @@ func (cli *DBClient) GetBlockByHash(hash string) (*models.Block, error) {
 		&transactionsRoot,
 		&receiptsRoot,
 		&block.Size,
+		&block.TransactionCount,
 		&block.GasUsed,
 		&block.GasLimit)
 	if err = rows.Err(); err != nil {
@@ -243,6 +245,7 @@ func (cli *DBClient) GetBlockRange(fromNumber, rng uint32) ([]models.Block, erro
 			&transactionsRoot,
 			&receiptsRoot,
 			&block.Size,
+			&block.TransactionCount,
 			&block.GasUsed,
 			&block.GasLimit)
 		if err = rows.Err(); err != nil {
@@ -455,6 +458,7 @@ func (cli *DBClient) InsertBlocks(blocks []*models.Block) error {
 		"transactions_root",
 		"receipts_root",
 		"size",
+		"transaction_count",
 		"gas_used",
 		"gas_limit"))
 
@@ -472,6 +476,7 @@ func (cli *DBClient) InsertBlocks(blocks []*models.Block) error {
 			bl.TransactionsRoot.Bytes(),
 			bl.ReceiptsRoot.Bytes(),
 			bl.Size,
+			len(bl.Transactions),
 			bl.GasUsed,
 			bl.GasLimit,
 		)
