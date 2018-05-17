@@ -86,7 +86,11 @@ func HandleBlock(w http.ResponseWriter, r *http.Request) {
 
 			id := uint64(rawId)
 
-			blocks, err := dbc.GetBlockRange(int64(id), int64(id)-int64(rng))
+			if rng > 100 {
+				rng = 100
+			}
+
+			blocks, err := dbc.GetBlockRange(int64(id), int64(rng))
 
 			if err != nil {
 				log.Printf("! Error: %s", err.Error())
