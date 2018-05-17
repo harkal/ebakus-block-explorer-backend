@@ -6,7 +6,6 @@ import (
 	"log"
 	"net/http"
 	"strconv"
-	"strings"
 
 	"bitbucket.org/pantelisss/ebakus_server/models"
 
@@ -179,11 +178,14 @@ func HandleTxByAddress(w http.ResponseWriter, r *http.Request) {
 	log.Println("Request Transaction by Address:", address, "-", reference)
 	var err error
 
-	if strings.Compare("from", reference) == 0 {
+	switch reference {
+	case "from":
 		txs, err = dbc.GetTransactionsByAddress(address, models.ADDRESS_FROM)
-	} else if strings.Compare("to", reference) == 0 {
+	case "to":
 		txs, err = dbc.GetTransactionsByAddress(address, models.ADDRESS_TO)
-	} else {
+	case "block":
+		txs, err = dbc.GetTransactionsByAddress(address, models.ADDRESS_BLOCKHASH)
+	default:
 		http.Error(w, "error", http.StatusBadRequest)
 		return
 	}

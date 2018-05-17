@@ -268,17 +268,21 @@ func (cli *DBClient) GetTransactionByHash(hash string) (*models.Transaction, err
 }
 
 // GetTransactionByAddress finds and returns the transaction with the provided address
-// as source (FROM) or destination (TO)
+// as source (FROM) or destination (TO), or the transactions of a block
 func (cli *DBClient) GetTransactionsByAddress(address string, addrtype models.AddressType) ([]models.Transaction, error) {
 	// Query for bytea value with the hex method, pass from char [1,end) since
 	// the required structure is E'\\xDEADBEEF'
 	// For more, check https://www.postgresql.org/docs/9.0/static/datatype-binary.html
 	var query string
-	if addrtype == models.ADDRESS_TO {
+	switch addrtype {
+	case models.ADDRESS_TO:
 		query = strings.Join([]string{"SELECT * FROM transactions WHERE addr_to = E'\\\\", address[1:], "'"}, "")
-	} else {
+	case models.ADDRESS_FROM:
 		query = strings.Join([]string{"SELECT * FROM transactions WHERE addr_from = E'\\\\", address[1:], "'"}, "")
+	case models.ADDRESS_BLOCKHASH:
+		query = strings.Join([]string{"SELECT * FROM transactions WHERE block_hash = E'\\\\", address[1:], "'"}, "")
 	}
+
 	rows, err := cli.db.Query(query)
 
 	if err != nil {

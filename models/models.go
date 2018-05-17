@@ -76,6 +76,7 @@ type AddressType int
 const (
 	ADDRESS_FROM AddressType = iota
 	ADDRESS_TO
+	ADDRESS_BLOCKHASH
 )
 
 // MarshalJSON converts a Transaction to a byte array
