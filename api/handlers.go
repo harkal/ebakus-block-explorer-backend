@@ -68,16 +68,18 @@ func HandleBlock(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		if rawId < 0 {
-			if rawId != -1 {
-				log.Printf("! Error: Bad negative id")
+		rngParam := r.URL.Query().Get("range")
+
+		if rngParam != "" {
+			rng, err := strconv.ParseUint(rngParam, 10, 64)
+			if err != nil {
+				log.Printf("! Error parsing range: %s", err.Error())
 				http.Error(w, "error", http.StatusBadRequest)
 				return
 			}
 
-			rng, err := strconv.ParseUint(r.URL.Query().Get("range"), 10, 64)
-			if err != nil {
-				log.Printf("! Error parsing range: %s", err.Error())
+			if rawId < 0 && rawId != -1 {
+				log.Printf("! Error: Bad negative id")
 				http.Error(w, "error", http.StatusBadRequest)
 				return
 			}
