@@ -310,15 +310,17 @@ func (cli *DBClient) GetTransactionsByAddress(address string, addrtype models.Ad
 			return nil, err
 		}
 
-		var cmpAddr string
-		if addrtype == models.ADDRESS_TO {
-			cmpAddr = strings.Join([]string{"0x", common.Bytes2Hex(addrto)}, "")
-		} else {
-			cmpAddr = strings.Join([]string{"0x", common.Bytes2Hex(addrfrom)}, "")
-		}
-		if strings.Compare(address, cmpAddr) != 0 {
-			return nil, errors.New("wrong transaction found")
-		}
+		/*
+			var cmpAddr string
+			if addrtype == models.ADDRESS_TO {
+				cmpAddr = strings.Join([]string{"0x", common.Bytes2Hex(addrto)}, "")
+			} else {
+				cmpAddr = strings.Join([]string{"0x", common.Bytes2Hex(addrfrom)}, "")
+			}
+			if strings.Compare(address, cmpAddr) != 0 {
+				return nil, errors.New("wrong transaction found")
+			}
+		*/
 
 		tx.Hash = common.BytesToHash(originalHash)
 		tx.BlockHash.SetBytes(blockHash)
