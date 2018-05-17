@@ -15,6 +15,7 @@ import (
 	"bitbucket.org/pantelisss/ebakus_server/models"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/nightlyone/lockfile"
 
 	"github.com/urfave/cli/altsrc"
 	cli "gopkg.in/urfave/cli.v1"
@@ -117,6 +118,18 @@ func streamInsertTransactions(db *db.DBClient, txsCh <-chan models.Transaction) 
 }
 
 func pullNewBlocks(c *cli.Context) error {
+	lock, err := lockfile.New(filepath.Join(os.TempDir(), "ebakuscrawler.lock"))
+	if err != nil {
+		fmt.Printf("Cannot init lock. reason: %v", err)
+		return err
+	}
+	err = lock.TryLock()
+	if err != nil {
+		fmt.Printf("Cannot lock %q, reason: %v", lock, err)
+		return err
+	}
+	defer lock.Unlock()
+
 	ipcFile := expandHome(c.String("ipc"))
 	ipc, err := ipc.NewIPCInterface(ipcFile)
 	if err != nil {
