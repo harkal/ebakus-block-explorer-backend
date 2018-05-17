@@ -74,6 +74,39 @@ func HandleBlock(w http.ResponseWriter, r *http.Request) {
 				http.Error(w, "error", http.StatusBadRequest)
 				return
 			}
+
+			rng, err := strconv.ParseUint(r.URL.Query().Get("range"), 10, 64)
+			if err != nil {
+				log.Printf("! Error parsing range: %s", err.Error())
+				http.Error(w, "error", http.StatusBadRequest)
+				return
+			}
+
+			id := uint64(rawId)
+
+			blocks, err := dbc.GetBlockRange(int64(id), int64(id)-int64(rng))
+
+			if err != nil {
+				log.Printf("! Error: %s", err.Error())
+				http.Error(w, "error", http.StatusInternalServerError)
+				return
+			}
+
+			if blocks == nil {
+				http.Error(w, "error", http.StatusNotFound)
+				return
+			}
+
+			res, err := json.Marshal(blocks)
+
+			if err != nil {
+				log.Printf("! Error: %s", err.Error())
+				http.Error(w, "error", http.StatusInternalServerError)
+			} else {
+				w.Write(res)
+			}
+
+			return
 		} else {
 			id := uint64(rawId)
 			log.Println("Request Block by ID:", id)
