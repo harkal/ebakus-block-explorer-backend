@@ -12,6 +12,7 @@ import (
 	"net/http"
 
 	"github.com/gorilla/mux"
+	"github.com/rs/cors"
 
 	cli "gopkg.in/urfave/cli.v1"
 )
@@ -69,7 +70,8 @@ func (ec explorerContext) startServer() cli.ActionFunc {
 		ec.router.HandleFunc("/transaction/{hash}", api.HandleTxByHash).Methods("GET")
 		ec.router.HandleFunc("/transaction/{ref}/{address}", api.HandleTxByAddress).Methods("GET")
 
-		err = http.ListenAndServe(buff.String(), ec.router)
+		handler := cors.Default().Handler(ec.router)
+		err = http.ListenAndServe(buff.String(), handler)
 
 		if err != nil {
 			log.Println(err.Error())
