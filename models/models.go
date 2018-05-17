@@ -19,6 +19,7 @@ type Block struct {
 	TransactionsRoot common.Hash    `json:"transactionsRoot"`
 	ReceiptsRoot     common.Hash    `json:"receiptsRoot"`
 	Size             hexutil.Uint64 `json:"size"`
+	TransactionCount hexutil.Uint64 `json:"transactionCount"`
 	GasUsed          hexutil.Uint64 `json:"gasUsed"`
 	GasLimit         hexutil.Uint64 `json:"gasLimit"`
 	Transactions     []common.Hash  `json:"transactions"`
@@ -40,6 +41,7 @@ func (b Block) MarshalJSON() ([]byte, error) {
 		TransactionsRoot common.Hash `json:"transactionsRoot"`
 		ReceiptsRoot     common.Hash `json:"receiptsRoot"`
 		Size             uint64      `json:"size"`
+		TransactionCount uint64      `json:"transactionCount"`
 		GasUsed          uint64      `json:"gasUsed"`
 		GasLimit         uint64      `json:"gasLimit"`
 	}
@@ -52,6 +54,7 @@ func (b Block) MarshalJSON() ([]byte, error) {
 	enc.TransactionsRoot = b.TransactionsRoot
 	enc.ReceiptsRoot = b.ReceiptsRoot
 	enc.Size = uint64(b.Size)
+	enc.TransactionCount = uint64(b.TransactionCount)
 	enc.GasUsed = uint64(b.GasUsed)
 	enc.GasLimit = uint64(b.GasLimit)
 

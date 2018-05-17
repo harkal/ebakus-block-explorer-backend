@@ -7,6 +7,7 @@ CREATE TABLE blocks (
   transactions_root bytea, 
   receipts_root bytea,
   size INT,
+  transaction_count INT,
   gas_used BIGINT,
   gas_limit BIGINT
 );

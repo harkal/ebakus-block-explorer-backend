@@ -455,6 +455,7 @@ func (cli *DBClient) InsertBlocks(blocks []*models.Block) error {
 		"transactions_root",
 		"receipts_root",
 		"size",
+		"transaction_count",
 		"gas_used",
 		"gas_limit"))
 
@@ -472,6 +473,7 @@ func (cli *DBClient) InsertBlocks(blocks []*models.Block) error {
 			bl.TransactionsRoot.Bytes(),
 			bl.ReceiptsRoot.Bytes(),
 			bl.Size,
+			len(bl.Transactions),
 			bl.GasUsed,
 			bl.GasLimit,
 		)
