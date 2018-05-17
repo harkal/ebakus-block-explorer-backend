@@ -71,7 +71,7 @@ func HandleBlock(w http.ResponseWriter, r *http.Request) {
 		rngParam := r.URL.Query().Get("range")
 
 		if rngParam != "" {
-			rng, err := strconv.ParseUint(rngParam, 10, 64)
+			rng, err := strconv.ParseUint(rngParam, 10, 32)
 			if err != nil {
 				log.Printf("! Error parsing range: %s", err.Error())
 				http.Error(w, "error", http.StatusBadRequest)
@@ -84,13 +84,18 @@ func HandleBlock(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 
-			id := uint64(rawId)
+			var id uint32
+			if rawId == -1 {
+				id = ^uint32(0)
+			} else {
+				id = uint32(rawId)
+			}
 
 			if rng > 100 {
 				rng = 100
 			}
 
-			blocks, err := dbc.GetBlockRange(id, rng)
+			blocks, err := dbc.GetBlockRange(id, uint32(rng))
 
 			if err != nil {
 				log.Printf("! Error: %s", err.Error())

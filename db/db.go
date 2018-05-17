@@ -223,8 +223,7 @@ func (cli *DBClient) GetBlockByHash(hash string) (*models.Block, error) {
 }
 
 // GetBlockByID finds and returns the block with the provided ID
-func (cli *DBClient) GetBlockRange(fromNumber, rng uint64) ([]models.Block, error) {
-
+func (cli *DBClient) GetBlockRange(fromNumber, rng uint32) ([]models.Block, error) {
 	rows, err := cli.db.Query("SELECT * FROM blocks WHERE number <= $1 order by number desc limit $2", fromNumber, rng)
 	if err != nil {
 		return nil, err
