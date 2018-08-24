@@ -2,6 +2,7 @@ package ipc
 
 import (
 	"errors"
+	"sync"
 	"sync/atomic"
 
 	"bitbucket.org/pantelisss/ebakus_server/models"
@@ -89,7 +90,8 @@ func (ipc *IPCInterface) GetBlocks(first, last uint64) ([]*models.Block, error) 
 	return blocks, nil
 }
 
-func (ipc *IPCInterface) StreamTransactions(tCh chan<- models.TransactionFull, hashCh <-chan common.Hash) {
+func (ipc *IPCInterface) StreamTransactions(wg *sync.WaitGroup, tCh chan<- models.TransactionFull, hashCh <-chan common.Hash) {
+	defer wg.Done()
 	for hash := range hashCh {
 		if tx, txr, err := ipc.GetTransactionByHash(&hash); err == nil {
 			tf := models.TransactionFull{Tx: tx, Txr: txr}
@@ -99,7 +101,8 @@ func (ipc *IPCInterface) StreamTransactions(tCh chan<- models.TransactionFull, h
 	close(tCh)
 }
 
-func (ipc *IPCInterface) StreamBlocks(bCh chan<- *models.Block, tCh chan<- common.Hash, ops *int64, first, last uint64, stride, offset int) error {
+func (ipc *IPCInterface) StreamBlocks(wg *sync.WaitGroup, bCh chan<- *models.Block, tCh chan<- common.Hash, ops *int64, first, last uint64, stride, offset int) error {
+	defer wg.Done()
 	count := last - first + 1
 	if count < 0 {
 		return ErrInvalideBlockRange

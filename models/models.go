@@ -69,6 +69,7 @@ type Transaction struct {
 	To               common.Address `json:"to"`
 	Value            hexutil.Uint64 `json:"value"`
 	GasLimit         hexutil.Uint64 `json:"gas"`
+	WorkNonce        hexutil.Uint64 `json:"workNonce"`
 	// Input            []byte         `json:"input"` // Causes error during JSON unmarshaling
 }
 
@@ -105,6 +106,7 @@ func (t Transaction) MarshalJSON() ([]byte, error) {
 		To               common.Address `json:"to"`
 		Value            uint64         `json:"value"`
 		GasLimit         uint64         `json:"gas"`
+		WorkNonce        uint64         `json:"workNonce"`
 	}
 
 	enc.Hash = t.Hash
@@ -116,6 +118,7 @@ func (t Transaction) MarshalJSON() ([]byte, error) {
 	enc.To = t.To
 	enc.Value = uint64(t.Value)
 	enc.GasLimit = uint64(t.GasLimit)
+	enc.WorkNonce = uint64(t.WorkNonce)
 
 	return json.Marshal(&enc)
 }

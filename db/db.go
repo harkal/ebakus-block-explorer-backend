@@ -385,6 +385,7 @@ func (cli *DBClient) InsertTransactions(transactions []models.TransactionFull) e
 
 	stmt, err := txn.Prepare(pq.CopyIn("transactions",
 		"hash",
+		"status",
 		"nonce",
 		"block_hash",
 		"block_number",
@@ -392,7 +393,9 @@ func (cli *DBClient) InsertTransactions(transactions []models.TransactionFull) e
 		"addr_from",
 		"addr_to",
 		"value",
-		"gas"))
+		"gasused",
+		"gaslimit",
+		"worknonce"))
 
 	if err != nil {
 		return err
@@ -400,9 +403,11 @@ func (cli *DBClient) InsertTransactions(transactions []models.TransactionFull) e
 
 	for _, txf := range transactions {
 		tx := txf.Tx
+		txr := txf.Txr
 		log.Println("Adding", tx.BlockNumber, tx.TransactionIndex)
 		_, err := stmt.Exec(
 			tx.Hash.Bytes(),
+			txr.Status,
 			tx.Nonce,
 			tx.BlockHash.Bytes(),
 			tx.BlockNumber,
@@ -410,7 +415,9 @@ func (cli *DBClient) InsertTransactions(transactions []models.TransactionFull) e
 			tx.From.Bytes(),
 			tx.To.Bytes(),
 			tx.Value,
+			txr.GasUsed,
 			tx.GasLimit,
+			tx.WorkNonce,
 		)
 
 		if err != nil {

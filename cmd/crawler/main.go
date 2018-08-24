@@ -8,6 +8,7 @@ import (
 	"os/user"
 	"path/filepath"
 	"strconv"
+	"sync"
 	"time"
 
 	"bitbucket.org/pantelisss/ebakus_server/db"
@@ -87,7 +88,8 @@ func streamInsertBlocks(db *db.DBClient, ch chan *models.Block) (int, error) {
 	return count, nil
 }
 
-func streamInsertTransactions(db *db.DBClient, txsCh <-chan models.TransactionFull) {
+func streamInsertTransactions(wg *sync.WaitGroup, db *db.DBClient, txsCh <-chan models.TransactionFull) {
+	defer wg.Done()
 	const bufSize = 20
 	count := 0
 	txs := make([]models.TransactionFull, 0, bufSize)
@@ -161,16 +163,26 @@ func pullNewBlocks(c *cli.Context) error {
 	txsHashCh := make(chan common.Hash, 512)
 	txsCh := make(chan models.TransactionFull, 512)
 
+	var wg sync.WaitGroup
+
 	workerThreads := c.Int("threads")
 	ops := int64(workerThreads)
 	for i := 0; i < workerThreads; i++ {
-		go ipc.StreamBlocks(blockCh, txsHashCh, &ops, first, last, workerThreads, i)
+		wg.Add(1)
+		go ipc.StreamBlocks(&wg, blockCh, txsHashCh, &ops, first, last, workerThreads, i)
 	}
 
-	go ipc.StreamTransactions(txsCh, txsHashCh)
-	go streamInsertTransactions(db, txsCh)
+	wg.Add(3)
+	go ipc.StreamTransactions(&wg, txsCh, txsHashCh)
+	go streamInsertTransactions(&wg, db, txsCh)
 
-	count, err := streamInsertBlocks(db, blockCh)
+	var count int
+	go func() {
+		defer wg.Done()
+		count, _ = streamInsertBlocks(db, blockCh)
+	}()
+
+	wg.Wait()
 
 	elapsed := time.Now().Sub(stime)
 	log.Printf("Processed %d blocks in %.3f (%.0f bps)", count, elapsed.Seconds(), float64(count)/elapsed.Seconds())
