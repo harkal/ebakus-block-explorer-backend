@@ -131,7 +131,7 @@ func (t Transaction) MarshalJSON() ([]byte, error) {
 	return json.Marshal(&enc)
 }
 
-func (t InputData) UnmarshalJSON(b []byte) error {
+func (t *InputData) UnmarshalJSON(b []byte) error {
 	var str string
 	err := json.Unmarshal(b, &str)
 	if err != nil {
@@ -142,7 +142,7 @@ func (t InputData) UnmarshalJSON(b []byte) error {
 		return nil
 	}
 
-	t, err = hex.DecodeString(str[2:])
+	*t, err = hex.DecodeString(str[2:])
 	if err != nil {
 		return err
 	}
