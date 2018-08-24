@@ -33,16 +33,17 @@ type JSONBlock Block
 func (b Block) MarshalJSON() ([]byte, error) {
 	// Struct with only the fields we want in the final JSON?
 	var enc struct {
-		Number           uint64      `json:"number"`
-		TimeStamp        uint64      `json:"timestamp"`
-		Hash             common.Hash `json:"hash"`
-		ParentHash       common.Hash `json:"parentHash"`
-		TransactionsRoot common.Hash `json:"transactionsRoot"`
-		ReceiptsRoot     common.Hash `json:"receiptsRoot"`
-		Size             uint64      `json:"size"`
-		TransactionCount uint64      `json:"transactionCount"`
-		GasUsed          uint64      `json:"gasUsed"`
-		GasLimit         uint64      `json:"gasLimit"`
+		Number           uint64           `json:"number"`
+		TimeStamp        uint64           `json:"timestamp"`
+		Hash             common.Hash      `json:"hash"`
+		ParentHash       common.Hash      `json:"parentHash"`
+		TransactionsRoot common.Hash      `json:"transactionsRoot"`
+		ReceiptsRoot     common.Hash      `json:"receiptsRoot"`
+		Size             uint64           `json:"size"`
+		TransactionCount uint64           `json:"transactionCount"`
+		GasUsed          uint64           `json:"gasUsed"`
+		GasLimit         uint64           `json:"gasLimit"`
+		Delegates        []common.Address `json:"delegates"`
 	}
 
 	enc.Number = uint64(b.Number)
@@ -55,6 +56,7 @@ func (b Block) MarshalJSON() ([]byte, error) {
 	enc.TransactionCount = uint64(b.TransactionCount)
 	enc.GasUsed = uint64(b.GasUsed)
 	enc.GasLimit = uint64(b.GasLimit)
+	enc.Delegates = b.Delegates
 
 	return json.Marshal(&enc)
 }
@@ -69,8 +71,9 @@ type Transaction struct {
 	To               common.Address `json:"to"`
 	Value            hexutil.Uint64 `json:"value"`
 	GasLimit         hexutil.Uint64 `json:"gas"`
+	GasPrice         hexutil.Uint64 `json:"gasPrice"`
 	WorkNonce        hexutil.Uint64 `json:"workNonce"`
-	// Input            []byte         `json:"input"` // Causes error during JSON unmarshaling
+	Input            []byte         `json:"input"`
 }
 
 type TransactionReceipt struct {
@@ -106,6 +109,7 @@ func (t Transaction) MarshalJSON() ([]byte, error) {
 		To               common.Address `json:"to"`
 		Value            uint64         `json:"value"`
 		GasLimit         uint64         `json:"gas"`
+		GasPrice         uint64         `json:"gasPrice"`
 		WorkNonce        uint64         `json:"workNonce"`
 	}
 
@@ -118,7 +122,50 @@ func (t Transaction) MarshalJSON() ([]byte, error) {
 	enc.To = t.To
 	enc.Value = uint64(t.Value)
 	enc.GasLimit = uint64(t.GasLimit)
+	enc.GasPrice = uint64(t.GasPrice)
 	enc.WorkNonce = uint64(t.WorkNonce)
+
+	return json.Marshal(&enc)
+}
+
+// MarshalJSON converts a Transaction to a byte array
+// that contains it's data in JSON format.
+func (tf TransactionFull) MarshalJSON() ([]byte, error) {
+	// Struct with only the fields we want in the final JSON?
+	var enc struct {
+		Hash             common.Hash    `json:"hash"`
+		Status           uint64         `json:"status"`
+		Nonce            uint64         `json:"nonce"`
+		BlockHash        common.Hash    `json:"blockHash"`
+		BlockNumber      uint64         `json:"blockNumber"`
+		TransactionIndex uint64         `json:"transactionIndex"`
+		From             common.Address `json:"from"`
+		To               common.Address `json:"to"`
+		Value            uint64         `json:"value"`
+		GasUsed          uint64         `json:"gasUsed"`
+		GasLimit         uint64         `json:"gasLimit"`
+		GasPrice         uint64         `json:"gasPrice"`
+		WorkNonce        uint64         `json:"workNonce"`
+		Input            []byte         `json:"input"`
+	}
+
+	t := tf.Tx
+	r := tf.Txr
+
+	enc.Hash = t.Hash
+	enc.Status = uint64(r.Status)
+	enc.Nonce = uint64(t.Nonce)
+	enc.BlockHash = t.BlockHash
+	enc.BlockNumber = uint64(t.BlockNumber)
+	enc.TransactionIndex = uint64(t.TransactionIndex)
+	enc.From = t.From
+	enc.To = t.To
+	enc.Value = uint64(t.Value)
+	enc.GasUsed = uint64(r.GasUsed)
+	enc.GasLimit = uint64(t.GasLimit)
+	enc.GasPrice = uint64(t.GasPrice)
+	enc.WorkNonce = uint64(t.WorkNonce)
+	enc.Input = t.Input
 
 	return json.Marshal(&enc)
 }

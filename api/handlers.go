@@ -164,7 +164,7 @@ func HandleTxByHash(w http.ResponseWriter, r *http.Request) {
 
 	vars := mux.Vars(r)
 
-	var tx *models.Transaction
+	var txf *models.TransactionFull
 
 	hash, ok := vars["hash"]
 
@@ -176,7 +176,7 @@ func HandleTxByHash(w http.ResponseWriter, r *http.Request) {
 
 	log.Println("Request Transaction by Hash:", hash)
 	var err error
-	tx, err = dbc.GetTransactionByHash(hash)
+	txf, err = dbc.GetTransactionByHash(hash)
 
 	if err != nil {
 		log.Printf("! Error: %s", err.Error())
@@ -184,12 +184,14 @@ func HandleTxByHash(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	tx := txf.Tx
+
 	if tx == nil {
 		http.Error(w, "error", http.StatusNotFound)
 		return
 	}
 
-	res, err := tx.MarshalJSON()
+	res, err := txf.MarshalJSON()
 
 	if err != nil {
 		log.Printf("! Error: %s", err.Error())

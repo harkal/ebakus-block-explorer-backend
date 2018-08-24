@@ -150,20 +150,20 @@ func (cli *DBClient) GetBlockByID(number uint64) (*models.Block, error) {
 
 	var block models.Block
 
-	var hash, parentHash, stateRoot, transactionsRoot, receiptsRoot []byte
+	var hash, parentHash, transactionsRoot, receiptsRoot, delegatesRaw []byte
 
 	rows.Next()
 	rows.Scan(&block.Number,
 		&block.TimeStamp,
 		&hash,
 		&parentHash,
-		&stateRoot,
 		&transactionsRoot,
 		&receiptsRoot,
 		&block.Size,
 		&block.TransactionCount,
 		&block.GasUsed,
-		&block.GasLimit)
+		&block.GasLimit,
+		&delegatesRaw)
 	if err = rows.Err(); err != nil {
 		return nil, err
 	}
@@ -172,6 +172,17 @@ func (cli *DBClient) GetBlockByID(number uint64) (*models.Block, error) {
 	block.ParentHash.SetBytes(parentHash)
 	block.TransactionsRoot.SetBytes(transactionsRoot)
 	block.ReceiptsRoot.SetBytes(receiptsRoot)
+
+	delegates := make([]common.Address, 0)
+	l := len(delegatesRaw)
+	delegateCount := l / 20
+	for i := 0; i < delegateCount; i++ {
+		var d common.Address
+		copy(d[:], delegatesRaw[20*i:20*i+20])
+		delegates = append(delegates, d)
+	}
+
+	block.Delegates = delegates
 
 	return &block, nil
 }
@@ -262,7 +273,7 @@ func (cli *DBClient) GetBlockRange(fromNumber, rng uint32) ([]models.Block, erro
 }
 
 // GetTransactionByHash finds and returns the transaction with the provided Hash
-func (cli *DBClient) GetTransactionByHash(hash string) (*models.Transaction, error) {
+func (cli *DBClient) GetTransactionByHash(hash string) (*models.TransactionFull, error) {
 	// Query for bytea value with the hex method, pass from char [1,end) since
 	// the required structure is E'\\xDEADBEEF'
 	// For more, check https://www.postgresql.org/docs/9.0/static/datatype-binary.html
@@ -275,6 +286,7 @@ func (cli *DBClient) GetTransactionByHash(hash string) (*models.Transaction, err
 	defer rows.Close()
 
 	var tx models.Transaction
+	var txr models.TransactionReceipt
 
 	var originalHash, blockHash, addrfrom, addrto, input []byte
 
@@ -288,10 +300,16 @@ func (cli *DBClient) GetTransactionByHash(hash string) (*models.Transaction, err
 		&addrto,
 		&tx.Value,
 		&tx.GasLimit,
-		&input)
+		&txr.GasUsed,
+		&tx.GasPrice,
+		&input,
+		&txr.Status,
+		&tx.WorkNonce)
 	if err = rows.Err(); err != nil {
 		return nil, err
 	}
+
+	log.Println(len(input), len(addrfrom))
 
 	cmpHash := strings.Join([]string{"0x", common.Bytes2Hex(originalHash)}, "")
 	if strings.Compare(hash, cmpHash) != 0 {
@@ -302,8 +320,9 @@ func (cli *DBClient) GetTransactionByHash(hash string) (*models.Transaction, err
 	tx.BlockHash.SetBytes(blockHash)
 	tx.From.SetBytes(addrfrom)
 	tx.To.SetBytes(addrto)
+	tx.Input = input
 
-	return &tx, nil
+	return &models.TransactionFull{Tx: &tx, Txr: &txr}, nil
 }
 
 // GetTransactionByAddress finds and returns the transaction with the provided address
@@ -395,7 +414,9 @@ func (cli *DBClient) InsertTransactions(transactions []models.TransactionFull) e
 		"value",
 		"gasused",
 		"gaslimit",
-		"worknonce"))
+		"gasprice",
+		"worknonce",
+		"input"))
 
 	if err != nil {
 		return err
@@ -404,7 +425,7 @@ func (cli *DBClient) InsertTransactions(transactions []models.TransactionFull) e
 	for _, txf := range transactions {
 		tx := txf.Tx
 		txr := txf.Txr
-		log.Println("Adding", tx.BlockNumber, tx.TransactionIndex)
+		log.Println("Adding", tx.BlockNumber, tx.TransactionIndex, tx.Input)
 		_, err := stmt.Exec(
 			tx.Hash.Bytes(),
 			txr.Status,
@@ -417,7 +438,9 @@ func (cli *DBClient) InsertTransactions(transactions []models.TransactionFull) e
 			tx.Value,
 			txr.GasUsed,
 			tx.GasLimit,
+			tx.GasPrice,
 			tx.WorkNonce,
+			tx.Input,
 		)
 
 		if err != nil {
@@ -464,13 +487,18 @@ func (cli *DBClient) InsertBlocks(blocks []*models.Block) error {
 		"size",
 		"transaction_count",
 		"gas_used",
-		"gas_limit"))
+		"gas_limit",
+		"delegates"))
 
 	if err != nil {
 		return err
 	}
 
 	for _, bl := range blocks {
+		dbytes := make([]byte, 0)
+		for _, d := range bl.Delegates {
+			dbytes = append(dbytes, d[:]...)
+		}
 		_, err := stmt.Exec(
 			bl.Number,
 			bl.TimeStamp,
@@ -482,6 +510,7 @@ func (cli *DBClient) InsertBlocks(blocks []*models.Block) error {
 			len(bl.Transactions),
 			bl.GasUsed,
 			bl.GasLimit,
+			dbytes,
 		)
 
 		if err != nil {
