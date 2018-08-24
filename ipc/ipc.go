@@ -2,6 +2,7 @@ package ipc
 
 import (
 	"errors"
+	"log"
 	"sync"
 	"sync/atomic"
 
@@ -93,10 +94,14 @@ func (ipc *IPCInterface) GetBlocks(first, last uint64) ([]*models.Block, error) 
 func (ipc *IPCInterface) StreamTransactions(wg *sync.WaitGroup, tCh chan<- models.TransactionFull, hashCh <-chan common.Hash) {
 	defer wg.Done()
 	for hash := range hashCh {
-		if tx, txr, err := ipc.GetTransactionByHash(&hash); err == nil {
-			tf := models.TransactionFull{Tx: tx, Txr: txr}
-			tCh <- tf
+		tx, txr, err := ipc.GetTransactionByHash(&hash)
+		if err != nil {
+			log.Println("Error getTransaction ipc:", err)
+			continue
 		}
+
+		tf := models.TransactionFull{Tx: tx, Txr: txr}
+		tCh <- tf
 	}
 	close(tCh)
 }

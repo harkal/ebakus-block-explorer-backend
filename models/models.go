@@ -1,6 +1,7 @@
 package models
 
 import (
+	"encoding/hex"
 	"encoding/json"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -61,6 +62,8 @@ func (b Block) MarshalJSON() ([]byte, error) {
 	return json.Marshal(&enc)
 }
 
+type InputData []byte
+
 type Transaction struct {
 	Hash             common.Hash    `json:"hash"`
 	Nonce            hexutil.Uint64 `json:"nonce"`
@@ -73,7 +76,7 @@ type Transaction struct {
 	GasLimit         hexutil.Uint64 `json:"gas"`
 	GasPrice         hexutil.Uint64 `json:"gasPrice"`
 	WorkNonce        hexutil.Uint64 `json:"workNonce"`
-	Input            []byte         `json:"input"`
+	Input            InputData      `json:"input"`
 }
 
 type TransactionReceipt struct {
@@ -128,6 +131,25 @@ func (t Transaction) MarshalJSON() ([]byte, error) {
 	return json.Marshal(&enc)
 }
 
+func (t InputData) UnmarshalJSON(b []byte) error {
+	var str string
+	err := json.Unmarshal(b, &str)
+	if err != nil {
+		return err
+	}
+
+	if str == "0x" {
+		return nil
+	}
+
+	t, err = hex.DecodeString(str[2:])
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 // MarshalJSON converts a Transaction to a byte array
 // that contains it's data in JSON format.
 func (tf TransactionFull) MarshalJSON() ([]byte, error) {
@@ -160,7 +182,7 @@ func (tf TransactionFull) MarshalJSON() ([]byte, error) {
 	enc.TransactionIndex = uint64(t.TransactionIndex)
 	enc.From = t.From
 	enc.To = t.To
-	enc.Value = uint64(t.Value)
+	enc.Value = uint64(t.Value) << 1
 	enc.GasUsed = uint64(r.GasUsed)
 	enc.GasLimit = uint64(t.GasLimit)
 	enc.GasPrice = uint64(t.GasPrice)

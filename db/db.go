@@ -446,6 +446,8 @@ func (cli *DBClient) InsertTransactions(transactions []models.TransactionFull) e
 		tx := txf.Tx
 		txr := txf.Txr
 		log.Println("Adding", tx.BlockNumber, tx.TransactionIndex, tx.Input)
+
+		v := uint64(tx.Value >> 1) // stupid go postgres driver
 		_, err := stmt.Exec(
 			tx.Hash.Bytes(),
 			txr.Status,
@@ -455,7 +457,7 @@ func (cli *DBClient) InsertTransactions(transactions []models.TransactionFull) e
 			tx.TransactionIndex,
 			tx.From.Bytes(),
 			tx.To.Bytes(),
-			tx.Value,
+			v,
 			txr.GasUsed,
 			tx.GasLimit,
 			tx.GasPrice,
@@ -464,7 +466,7 @@ func (cli *DBClient) InsertTransactions(transactions []models.TransactionFull) e
 		)
 
 		if err != nil {
-			log.Println("Error on Block", tx.BlockNumber, err.Error())
+			log.Println("Error on Transaction", tx.BlockNumber, err.Error())
 		}
 	}
 
