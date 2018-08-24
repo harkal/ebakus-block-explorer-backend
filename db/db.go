@@ -202,20 +202,20 @@ func (cli *DBClient) GetBlockByHash(hash string) (*models.Block, error) {
 
 	var block models.Block
 
-	var originalHash, parentHash, stateRoot, transactionsRoot, receiptsRoot []byte
+	var originalHash, parentHash, transactionsRoot, receiptsRoot, delegatesRaw []byte
 
 	rows.Next()
 	rows.Scan(&block.Number,
 		&block.TimeStamp,
 		&originalHash,
 		&parentHash,
-		&stateRoot,
 		&transactionsRoot,
 		&receiptsRoot,
 		&block.Size,
 		&block.TransactionCount,
 		&block.GasUsed,
-		&block.GasLimit)
+		&block.GasLimit,
+		&delegatesRaw)
 	if err = rows.Err(); err != nil {
 		return nil, err
 	}
@@ -229,6 +229,17 @@ func (cli *DBClient) GetBlockByHash(hash string) (*models.Block, error) {
 	block.ParentHash.SetBytes(parentHash)
 	block.TransactionsRoot.SetBytes(transactionsRoot)
 	block.ReceiptsRoot.SetBytes(receiptsRoot)
+
+	delegates := make([]common.Address, 0)
+	l := len(delegatesRaw)
+	delegateCount := l / 20
+	for i := 0; i < delegateCount; i++ {
+		var d common.Address
+		copy(d[:], delegatesRaw[20*i:20*i+20])
+		delegates = append(delegates, d)
+	}
+
+	block.Delegates = delegates
 
 	return &block, nil
 }
@@ -245,18 +256,18 @@ func (cli *DBClient) GetBlockRange(fromNumber, rng uint32) ([]models.Block, erro
 
 	for rows.Next() {
 		var block models.Block
-		var hash, parentHash, stateRoot, transactionsRoot, receiptsRoot []byte
+		var hash, parentHash, transactionsRoot, receiptsRoot, delegatesRaw []byte
 		rows.Scan(&block.Number,
 			&block.TimeStamp,
 			&hash,
 			&parentHash,
-			&stateRoot,
 			&transactionsRoot,
 			&receiptsRoot,
 			&block.Size,
 			&block.TransactionCount,
 			&block.GasUsed,
-			&block.GasLimit)
+			&block.GasLimit,
+			&delegatesRaw)
 		if err = rows.Err(); err != nil {
 			return nil, err
 		}
@@ -265,6 +276,17 @@ func (cli *DBClient) GetBlockRange(fromNumber, rng uint32) ([]models.Block, erro
 		block.ParentHash.SetBytes(parentHash)
 		block.TransactionsRoot.SetBytes(transactionsRoot)
 		block.ReceiptsRoot.SetBytes(receiptsRoot)
+
+		delegates := make([]common.Address, 0)
+		l := len(delegatesRaw)
+		delegateCount := l / 20
+		for i := 0; i < delegateCount; i++ {
+			var d common.Address
+			copy(d[:], delegatesRaw[20*i:20*i+20])
+			delegates = append(delegates, d)
+		}
+
+		block.Delegates = delegates
 
 		result = append(result, block)
 	}
