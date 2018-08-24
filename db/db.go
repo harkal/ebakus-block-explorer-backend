@@ -170,7 +170,6 @@ func (cli *DBClient) GetBlockByID(number uint64) (*models.Block, error) {
 
 	block.Hash.SetBytes(hash)
 	block.ParentHash.SetBytes(parentHash)
-	block.StateRoot.SetBytes(stateRoot)
 	block.TransactionsRoot.SetBytes(transactionsRoot)
 	block.ReceiptsRoot.SetBytes(receiptsRoot)
 
@@ -217,7 +216,6 @@ func (cli *DBClient) GetBlockByHash(hash string) (*models.Block, error) {
 
 	block.Hash = common.BytesToHash([]byte(hash))
 	block.ParentHash.SetBytes(parentHash)
-	block.StateRoot.SetBytes(stateRoot)
 	block.TransactionsRoot.SetBytes(transactionsRoot)
 	block.ReceiptsRoot.SetBytes(receiptsRoot)
 
@@ -254,7 +252,6 @@ func (cli *DBClient) GetBlockRange(fromNumber, rng uint32) ([]models.Block, erro
 
 		block.Hash.SetBytes(hash)
 		block.ParentHash.SetBytes(parentHash)
-		block.StateRoot.SetBytes(stateRoot)
 		block.TransactionsRoot.SetBytes(transactionsRoot)
 		block.ReceiptsRoot.SetBytes(receiptsRoot)
 
@@ -290,7 +287,7 @@ func (cli *DBClient) GetTransactionByHash(hash string) (*models.Transaction, err
 		&addrfrom,
 		&addrto,
 		&tx.Value,
-		&tx.Gas,
+		&tx.GasLimit,
 		&input)
 	if err = rows.Err(); err != nil {
 		return nil, err
@@ -346,7 +343,7 @@ func (cli *DBClient) GetTransactionsByAddress(address string, addrtype models.Ad
 			&addrfrom,
 			&addrto,
 			&tx.Value,
-			&tx.Gas,
+			&tx.GasLimit,
 			&input)
 		if err = rows.Err(); err != nil {
 			return nil, err
@@ -376,7 +373,7 @@ func (cli *DBClient) GetTransactionsByAddress(address string, addrtype models.Ad
 }
 
 // InsertTransactions adds a number of Transactions in the database
-func (cli *DBClient) InsertTransactions(transactions []models.Transaction) error {
+func (cli *DBClient) InsertTransactions(transactions []models.TransactionFull) error {
 	if len(transactions) == 0 {
 		return nil
 	}
@@ -401,7 +398,8 @@ func (cli *DBClient) InsertTransactions(transactions []models.Transaction) error
 		return err
 	}
 
-	for _, tx := range transactions {
+	for _, txf := range transactions {
+		tx := txf.Tx
 		log.Println("Adding", tx.BlockNumber, tx.TransactionIndex)
 		_, err := stmt.Exec(
 			tx.Hash.Bytes(),
@@ -412,7 +410,7 @@ func (cli *DBClient) InsertTransactions(transactions []models.Transaction) error
 			tx.From.Bytes(),
 			tx.To.Bytes(),
 			tx.Value,
-			tx.Gas,
+			tx.GasLimit,
 		)
 
 		if err != nil {
@@ -454,7 +452,6 @@ func (cli *DBClient) InsertBlocks(blocks []*models.Block) error {
 		"timestamp",
 		"hash",
 		"parent_hash",
-		"state_root",
 		"transactions_root",
 		"receipts_root",
 		"size",
@@ -472,7 +469,6 @@ func (cli *DBClient) InsertBlocks(blocks []*models.Block) error {
 			bl.TimeStamp,
 			bl.Hash.Bytes(),
 			bl.ParentHash.Bytes(),
-			bl.StateRoot.Bytes(),
 			bl.TransactionsRoot.Bytes(),
 			bl.ReceiptsRoot.Bytes(),
 			bl.Size,

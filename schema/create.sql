@@ -3,16 +3,16 @@ CREATE TABLE blocks (
   timestamp BIGINT, 
   hash bytea, 
   parent_hash bytea, 
-  state_root bytea, 
   transactions_root bytea, 
   receipts_root bytea,
   size INT,
   transaction_count INT,
   gas_used BIGINT,
-  gas_limit BIGINT
+  gas_limit BIGINT,
+  delegates bytea
 );
 
-CREATE INDEX CONCURRENTLY blockhash_idx ON blocks USING btree (hash);
+CREATE INDEX blockhash_idx ON blocks USING btree (hash);
 
 CREATE TABLE transactions (
   hash bytea PRIMARY KEY,
@@ -23,9 +23,14 @@ CREATE TABLE transactions (
   addr_from bytea,
   addr_to bytea,
   value BIGINT,
-  gas BIGINT,
-  input bytea
+  gasLimit BIGINT,
+  gasUsed BIGINT,
+  gasPrice BIGINT,
+  input bytea,
+  status BIGINT,
+
+  WorkNonce BIGINT
 );
 
-CREATE INDEX CONCURRENTLY txfrom_idx ON transactions USING btree (addr_from);
-CREATE INDEX CONCURRENTLY txto_idx ON transactions USING btree (addr_to);
+CREATE INDEX txfrom_idx ON transactions USING btree (addr_from);
+CREATE INDEX txto_idx ON transactions USING btree (addr_to);

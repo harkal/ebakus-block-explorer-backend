@@ -11,19 +11,19 @@ import (
 //go:generate gencodec -type Block -field-override blockMarshaling -out gen_block_json.go
 
 type Block struct {
-	Number           hexutil.Uint64 `json:"number"`
-	TimeStamp        hexutil.Uint64 `json:"timestamp"`
-	Hash             common.Hash    `json:"hash"`
-	ParentHash       common.Hash    `json:"parentHash"`
-	StateRoot        common.Hash    `json:"stateRoot"`
-	TransactionsRoot common.Hash    `json:"transactionsRoot"`
-	ReceiptsRoot     common.Hash    `json:"receiptsRoot"`
-	Size             hexutil.Uint64 `json:"size"`
-	TransactionCount hexutil.Uint64 `json:"transactionCount"`
-	GasUsed          hexutil.Uint64 `json:"gasUsed"`
-	GasLimit         hexutil.Uint64 `json:"gasLimit"`
-	Transactions     []common.Hash  `json:"transactions"`
-	LogsBloom        types.Bloom    `json:"logBloom"`
+	Number           hexutil.Uint64   `json:"number"`
+	TimeStamp        hexutil.Uint64   `json:"timestamp"`
+	Hash             common.Hash      `json:"hash"`
+	ParentHash       common.Hash      `json:"parentHash"`
+	TransactionsRoot common.Hash      `json:"transactionsRoot"`
+	ReceiptsRoot     common.Hash      `json:"receiptsRoot"`
+	Size             hexutil.Uint64   `json:"size"`
+	TransactionCount hexutil.Uint64   `json:"transactionCount"`
+	GasUsed          hexutil.Uint64   `json:"gasUsed"`
+	GasLimit         hexutil.Uint64   `json:"gasLimit"`
+	Transactions     []common.Hash    `json:"transactions"`
+	Delegates        []common.Address `json:"delegates"`
+	LogsBloom        types.Bloom      `json:"logBloom"`
 }
 
 type JSONBlock Block
@@ -37,7 +37,6 @@ func (b Block) MarshalJSON() ([]byte, error) {
 		TimeStamp        uint64      `json:"timestamp"`
 		Hash             common.Hash `json:"hash"`
 		ParentHash       common.Hash `json:"parentHash"`
-		StateRoot        common.Hash `json:"stateRoot"`
 		TransactionsRoot common.Hash `json:"transactionsRoot"`
 		ReceiptsRoot     common.Hash `json:"receiptsRoot"`
 		Size             uint64      `json:"size"`
@@ -50,7 +49,6 @@ func (b Block) MarshalJSON() ([]byte, error) {
 	enc.TimeStamp = uint64(b.TimeStamp)
 	enc.Hash = b.Hash
 	enc.ParentHash = b.ParentHash
-	enc.StateRoot = b.StateRoot
 	enc.TransactionsRoot = b.TransactionsRoot
 	enc.ReceiptsRoot = b.ReceiptsRoot
 	enc.Size = uint64(b.Size)
@@ -70,8 +68,19 @@ type Transaction struct {
 	From             common.Address `json:"from"`
 	To               common.Address `json:"to"`
 	Value            hexutil.Uint64 `json:"value"`
-	Gas              hexutil.Uint64 `json:"gas"`
+	GasLimit         hexutil.Uint64 `json:"gas"`
 	// Input            []byte         `json:"input"` // Causes error during JSON unmarshaling
+}
+
+type TransactionReceipt struct {
+	Status            hexutil.Uint64 `json:"status"`
+	GasUsed           hexutil.Uint64 `json:"gasUsed"`
+	CumulativeGasUsed hexutil.Uint64 `json:"cumulativeGasUsed"`
+}
+
+type TransactionFull struct {
+	Tx  *Transaction
+	Txr *TransactionReceipt
 }
 
 type AddressType int
@@ -95,7 +104,7 @@ func (t Transaction) MarshalJSON() ([]byte, error) {
 		From             common.Address `json:"from"`
 		To               common.Address `json:"to"`
 		Value            uint64         `json:"value"`
-		Gas              uint64         `json:"gas"`
+		GasLimit         uint64         `json:"gas"`
 	}
 
 	enc.Hash = t.Hash
@@ -106,7 +115,7 @@ func (t Transaction) MarshalJSON() ([]byte, error) {
 	enc.From = t.From
 	enc.To = t.To
 	enc.Value = uint64(t.Value)
-	enc.Gas = uint64(t.Gas)
+	enc.GasLimit = uint64(t.GasLimit)
 
 	return json.Marshal(&enc)
 }

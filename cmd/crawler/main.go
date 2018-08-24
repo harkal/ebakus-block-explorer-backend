@@ -87,14 +87,14 @@ func streamInsertBlocks(db *db.DBClient, ch chan *models.Block) (int, error) {
 	return count, nil
 }
 
-func streamInsertTransactions(db *db.DBClient, txsCh <-chan models.Transaction) {
+func streamInsertTransactions(db *db.DBClient, txsCh <-chan models.TransactionFull) {
 	const bufSize = 20
 	count := 0
-	txs := make([]models.Transaction, 0, bufSize)
+	txs := make([]models.TransactionFull, 0, bufSize)
 
 	for t := range txsCh {
 		if len(txsCh) >= 512 {
-			log.Println("Chocking on transactions", t.Hash, len(txsCh))
+			log.Println("Chocking on transactions", t.Tx.Hash, len(txsCh))
 		}
 
 		txs = append(txs, t)
@@ -105,7 +105,7 @@ func streamInsertTransactions(db *db.DBClient, txsCh <-chan models.Transaction) 
 				log.Println("Error streamInsertTransactions", err.Error())
 			}
 			count = count + len(txs)
-			txs = make([]models.Transaction, 0, bufSize)
+			txs = make([]models.TransactionFull, 0, bufSize)
 		}
 	}
 
@@ -159,7 +159,7 @@ func pullNewBlocks(c *cli.Context) error {
 
 	blockCh := make(chan *models.Block, 512)
 	txsHashCh := make(chan common.Hash, 512)
-	txsCh := make(chan models.Transaction, 512)
+	txsCh := make(chan models.TransactionFull, 512)
 
 	workerThreads := c.Int("threads")
 	ops := int64(workerThreads)

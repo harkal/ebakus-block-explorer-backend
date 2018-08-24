@@ -89,10 +89,11 @@ func (ipc *IPCInterface) GetBlocks(first, last uint64) ([]*models.Block, error) 
 	return blocks, nil
 }
 
-func (ipc *IPCInterface) StreamTransactions(tCh chan<- models.Transaction, hashCh <-chan common.Hash) {
+func (ipc *IPCInterface) StreamTransactions(tCh chan<- models.TransactionFull, hashCh <-chan common.Hash) {
 	for hash := range hashCh {
-		if tx, err := ipc.GetTransactionByHash(&hash); err == nil {
-			tCh <- *tx
+		if tx, txr, err := ipc.GetTransactionByHash(&hash); err == nil {
+			tf := models.TransactionFull{Tx: tx, Txr: txr}
+			tCh <- tf
 		}
 	}
 	close(tCh)
@@ -125,13 +126,19 @@ func (ipc *IPCInterface) StreamBlocks(bCh chan<- *models.Block, tCh chan<- commo
 	return nil
 }
 
-func (ipc *IPCInterface) GetTransactionByHash(hash *common.Hash) (*models.Transaction, error) {
+func (ipc *IPCInterface) GetTransactionByHash(hash *common.Hash) (*models.Transaction, *models.TransactionReceipt, error) {
 	var tx models.Transaction
+	var txr models.TransactionReceipt
 
 	err := ipc.cli.Call(&tx, "eth_getTransactionByHash", hash.String())
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
-	return &tx, nil
+	err = ipc.cli.Call(&txr, "eth_getTransactionReceipt", hash.String())
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return &tx, &txr, nil
 }
