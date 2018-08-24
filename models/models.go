@@ -114,6 +114,7 @@ func (t Transaction) MarshalJSON() ([]byte, error) {
 		GasLimit         uint64         `json:"gas"`
 		GasPrice         uint64         `json:"gasPrice"`
 		WorkNonce        uint64         `json:"workNonce"`
+		Input            string         `json:"input"`
 	}
 
 	enc.Hash = t.Hash
@@ -127,6 +128,8 @@ func (t Transaction) MarshalJSON() ([]byte, error) {
 	enc.GasLimit = uint64(t.GasLimit)
 	enc.GasPrice = uint64(t.GasPrice)
 	enc.WorkNonce = uint64(t.WorkNonce)
+
+	enc.Input = hex.EncodeToString(t.Input)
 
 	return json.Marshal(&enc)
 }
@@ -168,7 +171,7 @@ func (tf TransactionFull) MarshalJSON() ([]byte, error) {
 		GasLimit         uint64         `json:"gasLimit"`
 		GasPrice         uint64         `json:"gasPrice"`
 		WorkNonce        uint64         `json:"workNonce"`
-		Input            []byte         `json:"input"`
+		Input            string         `json:"input"`
 	}
 
 	t := tf.Tx
@@ -187,7 +190,7 @@ func (tf TransactionFull) MarshalJSON() ([]byte, error) {
 	enc.GasLimit = uint64(t.GasLimit)
 	enc.GasPrice = uint64(t.GasPrice)
 	enc.WorkNonce = uint64(t.WorkNonce)
-	enc.Input = t.Input
+	enc.Input = "0x" + hex.EncodeToString(t.Input)
 
 	return json.Marshal(&enc)
 }

@@ -340,6 +340,7 @@ func (cli *DBClient) GetTransactionByHash(hash string) (*models.TransactionFull,
 	tx.BlockHash.SetBytes(blockHash)
 	tx.From.SetBytes(addrfrom)
 	tx.To.SetBytes(addrto)
+
 	tx.Input = input
 
 	return &models.TransactionFull{Tx: &tx, Txr: &txr}, nil
