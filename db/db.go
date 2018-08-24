@@ -309,8 +309,6 @@ func (cli *DBClient) GetTransactionByHash(hash string) (*models.TransactionFull,
 		return nil, err
 	}
 
-	log.Println(len(input), len(addrfrom))
-
 	cmpHash := strings.Join([]string{"0x", common.Bytes2Hex(originalHash)}, "")
 	if strings.Compare(hash, cmpHash) != 0 {
 		return nil, errors.New("wrong transaction found")
