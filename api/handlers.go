@@ -201,6 +201,10 @@ func HandleTxByHash(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func HandleAddress(w http.ResponseWriter, r *http.Request) {
+
+}
+
 // HandleTxByAddress finds and returns a transaction by address (from or to)
 func HandleTxByAddress(w http.ResponseWriter, r *http.Request) {
 	if r.Method != "GET" {
@@ -238,6 +242,8 @@ func HandleTxByAddress(w http.ResponseWriter, r *http.Request) {
 		txs, err = dbc.GetTransactionsByAddress(address, models.ADDRESS_FROM)
 	case "to":
 		txs, err = dbc.GetTransactionsByAddress(address, models.ADDRESS_TO)
+	case "all":
+		txs, err = dbc.GetTransactionsByAddress(address, models.ADDRESS_ALL)
 	case "block":
 		txs, err = dbc.GetTransactionsByAddress(address, models.ADDRESS_BLOCKHASH)
 	default:

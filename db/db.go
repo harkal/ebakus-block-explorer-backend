@@ -361,6 +361,8 @@ func (cli *DBClient) GetTransactionsByAddress(address string, addrtype models.Ad
 		query = strings.Join([]string{"SELECT * FROM transactions WHERE addr_to = E'\\\\", address[1:], "'"}, "")
 	case models.ADDRESS_FROM:
 		query = strings.Join([]string{"SELECT * FROM transactions WHERE addr_from = E'\\\\", address[1:], "'"}, "")
+	case models.ADDRESS_ALL:
+		query = strings.Join([]string{"SELECT * FROM transactions WHERE addr_to = E'\\\\", address[1:], "'", "or addr_from = E'\\\\", address[1:], "'"}, "")
 	case models.ADDRESS_BLOCKHASH:
 		query = strings.Join([]string{"SELECT * FROM transactions WHERE block_hash = E'\\\\", address[1:], "'"}, "")
 	}
@@ -376,6 +378,8 @@ func (cli *DBClient) GetTransactionsByAddress(address string, addrtype models.Ad
 
 	for rows.Next() {
 		var tx models.Transaction
+		var txr models.TransactionReceipt
+
 		var originalHash, blockHash, addrfrom, addrto, input []byte
 
 		rows.Scan(&originalHash,
@@ -387,7 +391,11 @@ func (cli *DBClient) GetTransactionsByAddress(address string, addrtype models.Ad
 			&addrto,
 			&tx.Value,
 			&tx.GasLimit,
-			&input)
+			&txr.GasUsed,
+			&tx.GasPrice,
+			&input,
+			&txr.Status,
+			&tx.WorkNonce)
 		if err = rows.Err(); err != nil {
 			return nil, err
 		}
@@ -408,6 +416,8 @@ func (cli *DBClient) GetTransactionsByAddress(address string, addrtype models.Ad
 		tx.BlockHash.SetBytes(blockHash)
 		tx.From.SetBytes(addrfrom)
 		tx.To.SetBytes(addrto)
+
+		tx.Input = input
 
 		result = append(result, tx)
 	}

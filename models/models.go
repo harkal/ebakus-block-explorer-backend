@@ -100,6 +100,7 @@ type AddressType int
 const (
 	ADDRESS_FROM AddressType = iota
 	ADDRESS_TO
+	ADDRESS_ALL
 	ADDRESS_BLOCKHASH
 )
 
