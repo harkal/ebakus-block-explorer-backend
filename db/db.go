@@ -351,7 +351,7 @@ func (cli *DBClient) GetTransactionByHash(hash string) (*models.TransactionFull,
 
 // GetTransactionByAddress finds and returns the transaction with the provided address
 // as source (FROM) or destination (TO), or the transactions of a block
-func (cli *DBClient) GetTransactionsByAddress(address string, addrtype models.AddressType) ([]models.Transaction, error) {
+func (cli *DBClient) GetTransactionsByAddress(address string, addrtype models.AddressType) ([]models.TransactionFull, error) {
 	// Query for bytea value with the hex method, pass from char [1,end) since
 	// the required structure is E'\\xDEADBEEF'
 	// For more, check https://www.postgresql.org/docs/9.0/static/datatype-binary.html
@@ -374,7 +374,7 @@ func (cli *DBClient) GetTransactionsByAddress(address string, addrtype models.Ad
 	}
 	defer rows.Close()
 
-	var result []models.Transaction
+	var result []models.TransactionFull
 
 	for rows.Next() {
 		var tx models.Transaction
@@ -419,7 +419,7 @@ func (cli *DBClient) GetTransactionsByAddress(address string, addrtype models.Ad
 
 		tx.Input = input
 
-		result = append(result, tx)
+		result = append(result, models.TransactionFull{Tx: &tx, Txr: &txr})
 	}
 
 	return result, nil

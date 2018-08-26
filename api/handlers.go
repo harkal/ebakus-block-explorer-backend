@@ -223,7 +223,7 @@ func HandleTxByAddress(w http.ResponseWriter, r *http.Request) {
 
 	vars := mux.Vars(r)
 
-	var txs []models.Transaction
+	var txs []models.TransactionFull
 
 	address, ok := vars["address"]
 	reference, ok := vars["ref"]
