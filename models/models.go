@@ -11,11 +11,14 @@ import (
 
 //go:generate gencodec -type Block -field-override blockMarshaling -out gen_block_json.go
 
+type SignatureType []byte
+
 type Block struct {
 	Number           hexutil.Uint64   `json:"number"`
 	TimeStamp        hexutil.Uint64   `json:"timestamp"`
 	Hash             common.Hash      `json:"hash"`
 	ParentHash       common.Hash      `json:"parentHash"`
+	Signature        SignatureType    `json:"signature"`
 	TransactionsRoot common.Hash      `json:"transactionsRoot"`
 	ReceiptsRoot     common.Hash      `json:"receiptsRoot"`
 	Size             hexutil.Uint64   `json:"size"`
@@ -38,6 +41,7 @@ func (b Block) MarshalJSON() ([]byte, error) {
 		TimeStamp        uint64           `json:"timestamp"`
 		Hash             common.Hash      `json:"hash"`
 		ParentHash       common.Hash      `json:"parentHash"`
+		Signature        SignatureType    `json:"signature"`
 		TransactionsRoot common.Hash      `json:"transactionsRoot"`
 		ReceiptsRoot     common.Hash      `json:"receiptsRoot"`
 		Size             uint64           `json:"size"`
@@ -51,6 +55,7 @@ func (b Block) MarshalJSON() ([]byte, error) {
 	enc.TimeStamp = uint64(b.TimeStamp)
 	enc.Hash = b.Hash
 	enc.ParentHash = b.ParentHash
+	enc.Signature = b.Signature
 	enc.TransactionsRoot = b.TransactionsRoot
 	enc.ReceiptsRoot = b.ReceiptsRoot
 	enc.Size = uint64(b.Size)

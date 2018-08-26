@@ -163,7 +163,8 @@ func (cli *DBClient) GetBlockByID(number uint64) (*models.Block, error) {
 		&block.TransactionCount,
 		&block.GasUsed,
 		&block.GasLimit,
-		&delegatesRaw)
+		&delegatesRaw,
+		&block.Signature)
 	if err = rows.Err(); err != nil {
 		return nil, err
 	}
@@ -215,7 +216,8 @@ func (cli *DBClient) GetBlockByHash(hash string) (*models.Block, error) {
 		&block.TransactionCount,
 		&block.GasUsed,
 		&block.GasLimit,
-		&delegatesRaw)
+		&delegatesRaw,
+		&block.Signature)
 	if err = rows.Err(); err != nil {
 		return nil, err
 	}
@@ -225,7 +227,7 @@ func (cli *DBClient) GetBlockByHash(hash string) (*models.Block, error) {
 		return nil, errors.New("wrong block found")
 	}
 
-	block.Hash = common.BytesToHash([]byte(hash))
+	block.Hash.SetBytes(originalHash)
 	block.ParentHash.SetBytes(parentHash)
 	block.TransactionsRoot.SetBytes(transactionsRoot)
 	block.ReceiptsRoot.SetBytes(receiptsRoot)
@@ -267,7 +269,8 @@ func (cli *DBClient) GetBlockRange(fromNumber, rng uint32) ([]models.Block, erro
 			&block.TransactionCount,
 			&block.GasUsed,
 			&block.GasLimit,
-			&delegatesRaw)
+			&delegatesRaw,
+			&block.Signature)
 		if err = rows.Err(); err != nil {
 			return nil, err
 		}
@@ -505,6 +508,7 @@ func (cli *DBClient) InsertBlocks(blocks []*models.Block) error {
 		"timestamp",
 		"hash",
 		"parent_hash",
+		"signature",
 		"transactions_root",
 		"receipts_root",
 		"size",
@@ -527,6 +531,7 @@ func (cli *DBClient) InsertBlocks(blocks []*models.Block) error {
 			bl.TimeStamp,
 			bl.Hash.Bytes(),
 			bl.ParentHash.Bytes(),
+			bl.Signature,
 			bl.TransactionsRoot.Bytes(),
 			bl.ReceiptsRoot.Bytes(),
 			bl.Size,

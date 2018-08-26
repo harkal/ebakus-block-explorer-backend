@@ -9,7 +9,8 @@ CREATE TABLE blocks (
   transaction_count INT,
   gas_used BIGINT,
   gas_limit BIGINT,
-  delegates bytea
+  delegates bytea,
+  signature bytea
 );
 
 CREATE INDEX blockhash_idx ON blocks USING btree (hash);
