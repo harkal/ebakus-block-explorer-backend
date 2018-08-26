@@ -35,3 +35,4 @@ CREATE TABLE transactions (
 
 CREATE INDEX txfrom_idx ON transactions USING btree (addr_from);
 CREATE INDEX txto_idx ON transactions USING btree (addr_to);
+CREATE INDEX txblock_hash_idx ON transactions USING btree (block_hash);
