@@ -202,7 +202,50 @@ func HandleTxByHash(w http.ResponseWriter, r *http.Request) {
 }
 
 func HandleAddress(w http.ResponseWriter, r *http.Request) {
+	if r.Method != "GET" {
+		http.Error(w, "error", http.StatusBadRequest)
+		return
+	}
 
+	dbc := db.GetClient()
+	if dbc == nil {
+		log.Printf("! Error: DBClient is not initialized!")
+		http.Error(w, "error", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+
+	vars := mux.Vars(r)
+
+	address, ok := vars["address"]
+
+	if !ok {
+		log.Printf("! Error: %s", errors.New("Parameter is n"))
+		http.Error(w, "error", http.StatusBadRequest)
+		return
+	}
+
+	log.Println("Request Address info for:", address)
+
+	sumIn, sumOut, countIn, countOut, err := dbc.GetAddressTotals(address)
+
+	result := map[string]interface{}{
+		"address":   address,
+		"total_in":  sumIn,
+		"total_out": sumOut,
+		"count_in":  countIn,
+		"count_out": countOut,
+	}
+
+	res, err := json.Marshal(result)
+
+	if err != nil {
+		log.Printf("! Error: %s", err.Error())
+		http.Error(w, "error", http.StatusInternalServerError)
+	} else {
+		w.Write(res)
+	}
 }
 
 // HandleTxByAddress finds and returns a transaction by address (from or to)

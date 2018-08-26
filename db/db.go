@@ -349,6 +349,43 @@ func (cli *DBClient) GetTransactionByHash(hash string) (*models.TransactionFull,
 	return &models.TransactionFull{Tx: &tx, Txr: &txr}, nil
 }
 
+func (cli *DBClient) GetAddressTotals(address string) (sumIn, sumOut, countIn, countOut uint64, err error) {
+
+	query := strings.Join([]string{"SELECT count(value), sum(value) FROM transactions WHERE addr_to = E'\\\\", address[1:], "'"}, "")
+
+	rows, err := cli.db.Query(query)
+
+	if err != nil {
+		return 0, 0, 0, 0, err
+	}
+	defer rows.Close()
+
+	rows.Next()
+	rows.Scan(&sumIn,
+		&countIn)
+	if err = rows.Err(); err != nil {
+		return 0, 0, 0, 0, err
+	}
+
+	query = strings.Join([]string{"SELECT count(value), sum(value) FROM transactions WHERE addr_from = E'\\\\", address[1:], "'"}, "")
+
+	rows, err = cli.db.Query(query)
+
+	if err != nil {
+		return 0, 0, 0, 0, err
+	}
+	defer rows.Close()
+
+	rows.Next()
+	rows.Scan(&sumOut,
+		&countOut)
+	if err = rows.Err(); err != nil {
+		return 0, 0, 0, 0, err
+	}
+
+	return
+}
+
 // GetTransactionByAddress finds and returns the transaction with the provided address
 // as source (FROM) or destination (TO), or the transactions of a block
 func (cli *DBClient) GetTransactionsByAddress(address string, addrtype models.AddressType) ([]models.TransactionFull, error) {
@@ -399,18 +436,6 @@ func (cli *DBClient) GetTransactionsByAddress(address string, addrtype models.Ad
 		if err = rows.Err(); err != nil {
 			return nil, err
 		}
-
-		/*
-			var cmpAddr string
-			if addrtype == models.ADDRESS_TO {
-				cmpAddr = strings.Join([]string{"0x", common.Bytes2Hex(addrto)}, "")
-			} else {
-				cmpAddr = strings.Join([]string{"0x", common.Bytes2Hex(addrfrom)}, "")
-			}
-			if strings.Compare(address, cmpAddr) != 0 {
-				return nil, errors.New("wrong transaction found")
-			}
-		*/
 
 		tx.Hash = common.BytesToHash(originalHash)
 		tx.BlockHash.SetBytes(blockHash)
