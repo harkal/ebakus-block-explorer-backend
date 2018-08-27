@@ -399,14 +399,18 @@ func (cli *DBClient) GetTransactionsByAddress(address string, addrtype models.Ad
 	case models.ADDRESS_FROM:
 		query = strings.Join([]string{"SELECT * FROM transactions WHERE addr_from = E'\\\\", address[1:], "'"}, "")
 	case models.ADDRESS_ALL:
-		query = strings.Join([]string{"SELECT * FROM transactions WHERE addr_to = E'\\\\", address[1:], "'", "or addr_from = E'\\\\", address[1:], "'"}, "")
+		query = strings.Join([]string{"SELECT * FROM transactions WHERE addr_to = E'\\\\", address[1:], "'", " or addr_from = E'\\\\", address[1:], "'"}, "")
 	case models.ADDRESS_BLOCKHASH:
 		query = strings.Join([]string{"SELECT * FROM transactions WHERE block_hash = E'\\\\", address[1:], "'"}, "")
 	}
 
-	//query = strings.Join([]string{query, " ORDER BY timestamp ", order}, "")
+	if order != "asc" {
+		query = strings.Join([]string{query, " ORDER BY timestamp ", order}, "")
+	}
 
-	rows, err := cli.db.Query(query)
+	query = strings.Join([]string{query, " OFFSET $1 LIMIT $2"}, "")
+
+	rows, err := cli.db.Query(query, offset, limit)
 
 	if err != nil {
 		return nil, err
@@ -437,6 +441,7 @@ func (cli *DBClient) GetTransactionsByAddress(address string, addrtype models.Ad
 			&tx.WorkNonce,
 			&tx.Timestamp)
 		if err = rows.Err(); err != nil {
+			log.Println(err)
 			return nil, err
 		}
 

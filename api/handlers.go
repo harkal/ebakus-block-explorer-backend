@@ -290,6 +290,7 @@ func HandleTxByAddress(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "error", http.StatusBadRequest)
 			return
 		}
+	} else {
 		offset = 0
 	}
 
@@ -300,6 +301,7 @@ func HandleTxByAddress(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "error", http.StatusBadRequest)
 			return
 		}
+	} else {
 		limit = 20
 	}
 
@@ -307,7 +309,7 @@ func HandleTxByAddress(w http.ResponseWriter, r *http.Request) {
 		orderString = "asc"
 	}
 
-	if orderString != "asc" && orderString != "dec" {
+	if orderString != "asc" && orderString != "desc" {
 		orderString = "asc"
 	}
 
