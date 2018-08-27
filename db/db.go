@@ -353,7 +353,7 @@ func (cli *DBClient) GetTransactionByHash(hash string) (*models.TransactionFull,
 	return &models.TransactionFull{Tx: &tx, Txr: &txr}, nil
 }
 
-func (cli *DBClient) GetAddressTotals(address string) (sumIn, sumOut, countIn, countOut uint64, err error) {
+func (cli *DBClient) GetAddressTotals(address string) (sumIn, sumOut float64, countIn, countOut uint64, err error) {
 
 	query := strings.Join([]string{"SELECT count(value), sum(value) FROM transactions WHERE addr_to = E'\\\\", address[1:], "'"}, "")
 
@@ -364,14 +364,16 @@ func (cli *DBClient) GetAddressTotals(address string) (sumIn, sumOut, countIn, c
 	}
 	defer rows.Close()
 
+	var sumInEbakus float64
+
 	rows.Next()
-	rows.Scan(&sumIn,
-		&countIn)
+	rows.Scan(&countIn,
+		&sumInEbakus)
 	if err = rows.Err(); err != nil {
 		return 0, 0, 0, 0, err
 	}
 
-	query = strings.Join([]string{"SELECT count(value), sum(value)/1000000000000000000 FROM transactions WHERE addr_from = E'\\\\", address[1:], "'"}, "")
+	query = strings.Join([]string{"SELECT count(value), sum(value) FROM transactions WHERE addr_from = E'\\\\", address[1:], "'"}, "")
 
 	rows, err = cli.db.Query(query)
 
@@ -380,16 +382,16 @@ func (cli *DBClient) GetAddressTotals(address string) (sumIn, sumOut, countIn, c
 	}
 	defer rows.Close()
 
-	var countOutEbakus float64
+	var sumOutEbakus float64
 
 	rows.Next()
-	rows.Scan(&sumOut,
-		&countOutEbakus)
+	rows.Scan(&countOut, &sumOutEbakus)
 	if err = rows.Err(); err != nil {
 		return 0, 0, 0, 0, err
 	}
 
-	countOut = uint64(countOutEbakus*1000000000000000000) << 1
+	sumIn = sumInEbakus * 2.0
+	sumOut = sumOutEbakus * 2.0
 
 	return
 }
