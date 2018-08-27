@@ -419,6 +419,8 @@ func (cli *DBClient) GetTransactionsByAddress(address string, addrtype models.Ad
 
 	var result []models.TransactionFull
 
+	result = make([]models.TransactionFull, 0)
+
 	for rows.Next() {
 		var tx models.Transaction
 		var txr models.TransactionReceipt
