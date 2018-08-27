@@ -404,7 +404,7 @@ func (cli *DBClient) GetTransactionsByAddress(address string, addrtype models.Ad
 		query = strings.Join([]string{"SELECT * FROM transactions WHERE block_hash = E'\\\\", address[1:], "'"}, "")
 	}
 
-	query = strings.Join([]string{query, " ORDER BY timestamp ", order}, "")
+	//query = strings.Join([]string{query, " ORDER BY timestamp ", order}, "")
 
 	rows, err := cli.db.Query(query)
 
@@ -434,7 +434,8 @@ func (cli *DBClient) GetTransactionsByAddress(address string, addrtype models.Ad
 			&tx.GasPrice,
 			&input,
 			&txr.Status,
-			&tx.WorkNonce)
+			&tx.WorkNonce,
+			&tx.Timestamp)
 		if err = rows.Err(); err != nil {
 			return nil, err
 		}
@@ -465,6 +466,7 @@ func (cli *DBClient) InsertTransactions(transactions []models.TransactionFull) e
 
 	stmt, err := txn.Prepare(pq.CopyIn("transactions",
 		"hash",
+		"timestamp",
 		"status",
 		"nonce",
 		"block_hash",
@@ -491,6 +493,7 @@ func (cli *DBClient) InsertTransactions(transactions []models.TransactionFull) e
 		v := uint64(tx.Value >> 1) // stupid go postgres driver
 		_, err := stmt.Exec(
 			tx.Hash.Bytes(),
+			tx.Timestamp,
 			txr.Status,
 			tx.Nonce,
 			tx.BlockHash.Bytes(),

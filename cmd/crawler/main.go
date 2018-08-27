@@ -173,7 +173,7 @@ func pullNewBlocks(c *cli.Context) error {
 	}
 
 	wg.Add(3)
-	go ipc.StreamTransactions(&wg, txsCh, txsHashCh)
+	go ipc.StreamTransactions(&wg, db, txsCh, txsHashCh)
 	go streamInsertTransactions(&wg, db, txsCh)
 
 	var count int

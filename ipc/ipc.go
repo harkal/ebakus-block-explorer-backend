@@ -6,6 +6,7 @@ import (
 	"sync"
 	"sync/atomic"
 
+	"bitbucket.org/pantelisss/ebakus_server/db"
 	"bitbucket.org/pantelisss/ebakus_server/models"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -91,13 +92,17 @@ func (ipc *IPCInterface) GetBlocks(first, last uint64) ([]*models.Block, error) 
 	return blocks, nil
 }
 
-func (ipc *IPCInterface) StreamTransactions(wg *sync.WaitGroup, tCh chan<- models.TransactionFull, hashCh <-chan common.Hash) {
+func (ipc *IPCInterface) StreamTransactions(wg *sync.WaitGroup, db *db.DBClient, tCh chan<- models.TransactionFull, hashCh <-chan common.Hash) {
 	defer wg.Done()
 	for hash := range hashCh {
 		tx, txr, err := ipc.GetTransactionByHash(&hash)
 		if err != nil {
 			log.Println("Error getTransaction ipc:", err)
 			continue
+		}
+
+		if block, err := db.GetBlockByHash(tx.BlockHash.Hex()); err == nil {
+			tx.Timestamp = block.TimeStamp
 		}
 
 		tf := models.TransactionFull{Tx: tx, Txr: txr}
