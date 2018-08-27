@@ -388,7 +388,7 @@ func (cli *DBClient) GetAddressTotals(address string) (sumIn, sumOut, countIn, c
 
 // GetTransactionByAddress finds and returns the transaction with the provided address
 // as source (FROM) or destination (TO), or the transactions of a block
-func (cli *DBClient) GetTransactionsByAddress(address string, addrtype models.AddressType) ([]models.TransactionFull, error) {
+func (cli *DBClient) GetTransactionsByAddress(address string, addrtype models.AddressType, offset, limit uint64, order string) ([]models.TransactionFull, error) {
 	// Query for bytea value with the hex method, pass from char [1,end) since
 	// the required structure is E'\\xDEADBEEF'
 	// For more, check https://www.postgresql.org/docs/9.0/static/datatype-binary.html
@@ -403,6 +403,8 @@ func (cli *DBClient) GetTransactionsByAddress(address string, addrtype models.Ad
 	case models.ADDRESS_BLOCKHASH:
 		query = strings.Join([]string{"SELECT * FROM transactions WHERE block_hash = E'\\\\", address[1:], "'"}, "")
 	}
+
+	query = strings.Join([]string{query, " ORDER BY timestamp ", order}, "")
 
 	rows, err := cli.db.Query(query)
 

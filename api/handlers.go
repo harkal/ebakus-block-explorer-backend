@@ -268,7 +268,7 @@ func HandleTxByAddress(w http.ResponseWriter, r *http.Request) {
 
 	var txs []models.TransactionFull
 
-	address, ok := vars["address"]
+	address, _ := vars["address"]
 	reference, ok := vars["ref"]
 
 	if !ok {
@@ -277,18 +277,51 @@ func HandleTxByAddress(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	log.Println("Request Transaction by Address:", address, "-", reference)
+	offsetString := r.URL.Query().Get("offset")
+	limitString := r.URL.Query().Get("limit")
+	orderString := r.URL.Query().Get("order")
+
+	var offset, limit uint64
 	var err error
+	if offsetString != "" {
+		offset, err = strconv.ParseUint(offsetString, 10, 32)
+		if err != nil {
+			log.Printf("! Error parsing range: %s", err.Error())
+			http.Error(w, "error", http.StatusBadRequest)
+			return
+		}
+		offset = 0
+	}
+
+	if limitString != "" {
+		limit, err = strconv.ParseUint(limitString, 10, 32)
+		if err != nil {
+			log.Printf("! Error parsing range: %s", err.Error())
+			http.Error(w, "error", http.StatusBadRequest)
+			return
+		}
+		limit = 20
+	}
+
+	if orderString == "" {
+		orderString = "asc"
+	}
+
+	if orderString != "asc" && orderString != "dec" {
+		orderString = "asc"
+	}
+
+	log.Println("Request Transaction by Address:", address, "-", reference, offset, limit, orderString)
 
 	switch reference {
 	case "from":
-		txs, err = dbc.GetTransactionsByAddress(address, models.ADDRESS_FROM)
+		txs, err = dbc.GetTransactionsByAddress(address, models.ADDRESS_FROM, offset, limit, orderString)
 	case "to":
-		txs, err = dbc.GetTransactionsByAddress(address, models.ADDRESS_TO)
+		txs, err = dbc.GetTransactionsByAddress(address, models.ADDRESS_TO, offset, limit, orderString)
 	case "all":
-		txs, err = dbc.GetTransactionsByAddress(address, models.ADDRESS_ALL)
+		txs, err = dbc.GetTransactionsByAddress(address, models.ADDRESS_ALL, offset, limit, orderString)
 	case "block":
-		txs, err = dbc.GetTransactionsByAddress(address, models.ADDRESS_BLOCKHASH)
+		txs, err = dbc.GetTransactionsByAddress(address, models.ADDRESS_BLOCKHASH, offset, limit, orderString)
 	default:
 		http.Error(w, "error", http.StatusBadRequest)
 		return

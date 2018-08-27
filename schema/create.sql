@@ -30,9 +30,11 @@ CREATE TABLE transactions (
   input bytea,
   status BIGINT,
 
-  WorkNonce BIGINT
+  WorkNonce BIGINT,
+  timestamp BIGINT
 );
 
 CREATE INDEX txfrom_idx ON transactions USING btree (addr_from);
 CREATE INDEX txto_idx ON transactions USING btree (addr_to);
 CREATE INDEX txblock_hash_idx ON transactions USING btree (block_hash);
+CREATE INDEX timestamp_idx ON transactions USING btree (timestamp);

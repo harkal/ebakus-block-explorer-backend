@@ -71,6 +71,7 @@ type InputData []byte
 
 type Transaction struct {
 	Hash             common.Hash    `json:"hash"`
+	Timestamp        hexutil.Uint64 `json:"timestamp"`
 	Nonce            hexutil.Uint64 `json:"nonce"`
 	BlockHash        common.Hash    `json:"blockHash"`
 	BlockNumber      hexutil.Uint64 `json:"blockNumber"`
@@ -110,6 +111,7 @@ func (t Transaction) MarshalJSON() ([]byte, error) {
 	// Struct with only the fields we want in the final JSON?
 	var enc struct {
 		Hash             common.Hash    `json:"hash"`
+		Timestamp        uint64         `json:"timestamp"`
 		Nonce            uint64         `json:"nonce"`
 		BlockHash        common.Hash    `json:"blockHash"`
 		BlockNumber      uint64         `json:"blockNumber"`
@@ -124,6 +126,7 @@ func (t Transaction) MarshalJSON() ([]byte, error) {
 	}
 
 	enc.Hash = t.Hash
+	enc.Timestamp = uint64(t.Timestamp)
 	enc.Nonce = uint64(t.Nonce)
 	enc.BlockHash = t.BlockHash
 	enc.BlockNumber = uint64(t.BlockNumber)
@@ -165,6 +168,7 @@ func (tf TransactionFull) MarshalJSON() ([]byte, error) {
 	// Struct with only the fields we want in the final JSON?
 	var enc struct {
 		Hash             common.Hash    `json:"hash"`
+		Timestamp        uint64         `json:"timestamp"`
 		Status           uint64         `json:"status"`
 		Nonce            uint64         `json:"nonce"`
 		BlockHash        common.Hash    `json:"blockHash"`
@@ -184,6 +188,7 @@ func (tf TransactionFull) MarshalJSON() ([]byte, error) {
 	r := tf.Txr
 
 	enc.Hash = t.Hash
+	enc.Timestamp = uint64(t.Timestamp)
 	enc.Status = uint64(r.Status)
 	enc.Nonce = uint64(t.Nonce)
 	enc.BlockHash = t.BlockHash
