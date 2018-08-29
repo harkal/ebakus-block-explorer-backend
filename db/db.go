@@ -333,14 +333,10 @@ func (cli *DBClient) GetTransactionByHash(hash string) (*models.TransactionFull,
 		&tx.GasPrice,
 		&input,
 		&txr.Status,
-		&tx.WorkNonce)
+		&tx.WorkNonce,
+		&tx.Timestamp)
 	if err = rows.Err(); err != nil {
 		return nil, err
-	}
-
-	cmpHash := strings.Join([]string{"0x", common.Bytes2Hex(originalHash)}, "")
-	if strings.Compare(hash, cmpHash) != 0 {
-		return nil, errors.New("wrong transaction found")
 	}
 
 	tx.Hash = common.BytesToHash(originalHash)
