@@ -12,10 +12,9 @@ import (
 	"time"
 
 	"bitbucket.org/pantelisss/ebakus_server/db"
-	"bitbucket.org/pantelisss/ebakus_server/ipc"
+	ipcModule "bitbucket.org/pantelisss/ebakus_server/ipc"
 	"bitbucket.org/pantelisss/ebakus_server/models"
 
-	"github.com/ethereum/go-ethereum/common"
 	"github.com/nightlyone/lockfile"
 
 	"github.com/urfave/cli/altsrc"
@@ -133,7 +132,7 @@ func pullNewBlocks(c *cli.Context) error {
 	defer lock.Unlock()
 
 	ipcFile := expandHome(c.String("ipc"))
-	ipc, err := ipc.NewIPCInterface(ipcFile)
+	ipc, err := ipcModule.NewIPCInterface(ipcFile)
 	if err != nil {
 		log.Fatal("Failed to connect to ebakus", err)
 	}
@@ -160,7 +159,7 @@ func pullNewBlocks(c *cli.Context) error {
 	stime := time.Now()
 
 	blockCh := make(chan *models.Block, 512)
-	txsHashCh := make(chan common.Hash, 512)
+	txsHashCh := make(chan ipcModule.TransactionWithTimestamp, 512)
 	txsCh := make(chan models.TransactionFull, 512)
 
 	var wg sync.WaitGroup

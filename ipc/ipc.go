@@ -20,6 +20,11 @@ var (
 	ErrInvalideBlockRange = errors.New("Invalid block range")
 )
 
+type TransactionWithTimestamp struct {
+	Hash      common.Hash
+	Timestamp hexutil.Uint64
+}
+
 type IPCInterface struct {
 	cli *rpc.Client
 }
@@ -92,18 +97,16 @@ func (ipc *IPCInterface) GetBlocks(first, last uint64) ([]*models.Block, error) 
 	return blocks, nil
 }
 
-func (ipc *IPCInterface) StreamTransactions(wg *sync.WaitGroup, db *db.DBClient, tCh chan<- models.TransactionFull, hashCh <-chan common.Hash) {
+func (ipc *IPCInterface) StreamTransactions(wg *sync.WaitGroup, db *db.DBClient, tCh chan<- models.TransactionFull, hashCh <-chan TransactionWithTimestamp) {
 	defer wg.Done()
-	for hash := range hashCh {
-		tx, txr, err := ipc.GetTransactionByHash(&hash)
+	for obj := range hashCh {
+		tx, txr, err := ipc.GetTransactionByHash(&obj.Hash)
 		if err != nil {
 			log.Println("Error getTransaction ipc:", err)
 			continue
 		}
 
-		if block, err := db.GetBlockByHash(tx.BlockHash.Hex()); err == nil {
-			tx.Timestamp = block.TimeStamp
-		}
+		tx.Timestamp = obj.Timestamp
 
 		tf := models.TransactionFull{Tx: tx, Txr: txr}
 		tCh <- tf
@@ -111,7 +114,7 @@ func (ipc *IPCInterface) StreamTransactions(wg *sync.WaitGroup, db *db.DBClient,
 	close(tCh)
 }
 
-func (ipc *IPCInterface) StreamBlocks(wg *sync.WaitGroup, bCh chan<- *models.Block, tCh chan<- common.Hash, ops *int64, first, last uint64, stride, offset int) error {
+func (ipc *IPCInterface) StreamBlocks(wg *sync.WaitGroup, bCh chan<- *models.Block, tCh chan<- TransactionWithTimestamp, ops *int64, first, last uint64, stride, offset int) error {
 	defer wg.Done()
 	count := last - first + 1
 	if count < 0 {
@@ -127,7 +130,7 @@ func (ipc *IPCInterface) StreamBlocks(wg *sync.WaitGroup, bCh chan<- *models.Blo
 		bCh <- bl
 
 		for _, tx := range bl.Transactions {
-			tCh <- tx
+			tCh <- TransactionWithTimestamp{Hash: tx, Timestamp: bl.TimeStamp}
 		}
 	}
 
