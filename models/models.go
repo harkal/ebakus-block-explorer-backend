@@ -196,7 +196,7 @@ func (tf TransactionFull) MarshalJSON() ([]byte, error) {
 	enc.TransactionIndex = uint64(t.TransactionIndex)
 	enc.From = t.From
 	enc.To = t.To
-	enc.Value = uint64(t.Value) << 1
+	enc.Value = uint64(t.Value) * 10000
 	enc.GasUsed = uint64(r.GasUsed)
 	enc.GasLimit = uint64(t.GasLimit)
 	enc.GasPrice = uint64(t.GasPrice)
