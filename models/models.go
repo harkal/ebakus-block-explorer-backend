@@ -7,7 +7,6 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/ethereum/go-ethereum/core/types"
 )
 
 //go:generate gencodec -type Block -field-override blockMarshaling -out gen_block_json.go
@@ -25,7 +24,6 @@ type Block struct {
 	GasLimit         hexutil.Uint64   `json:"gasLimit"`
 	Transactions     []common.Hash    `json:"transactions"`
 	Delegates        []common.Address `json:"delegates"`
-	LogsBloom        types.Bloom      `json:"logBloom"`
 }
 
 type JSONBlock Block
