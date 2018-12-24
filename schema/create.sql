@@ -1,16 +1,15 @@
 CREATE TABLE blocks (
-  number BIGINT PRIMARY KEY, 
-  timestamp BIGINT, 
-  hash bytea, 
-  parent_hash bytea, 
-  transactions_root bytea, 
+  number BIGINT PRIMARY KEY,
+  timestamp BIGINT,
+  hash bytea,
+  parent_hash bytea,
+  transactions_root bytea,
   receipts_root bytea,
   size INT,
   transaction_count INT,
   gas_used BIGINT,
   gas_limit BIGINT,
-  delegates bytea,
-  signature bytea
+  delegates bytea
 );
 
 CREATE INDEX blockhash_idx ON blocks USING btree (hash);
