@@ -157,7 +157,7 @@ func (cli *DBClient) GetBlockByID(number uint64) (*models.Block, error) {
 
 	var block models.Block
 
-	var hash, parentHash, transactionsRoot, receiptsRoot, delegatesRaw []byte
+	var hash, parentHash, transactionsRoot, receiptsRoot, delegatesRaw, producer []byte
 
 	rows.Next()
 	rows.Scan(&block.Number,
@@ -170,7 +170,8 @@ func (cli *DBClient) GetBlockByID(number uint64) (*models.Block, error) {
 		&block.TransactionCount,
 		&block.GasUsed,
 		&block.GasLimit,
-		&delegatesRaw)
+		&delegatesRaw,
+		&producer)
 	if err = rows.Err(); err != nil {
 		return nil, err
 	}
@@ -190,6 +191,7 @@ func (cli *DBClient) GetBlockByID(number uint64) (*models.Block, error) {
 	}
 
 	block.Delegates = delegates
+	block.Producer.SetBytes(producer)
 
 	return &block, nil
 }
@@ -213,7 +215,7 @@ func (cli *DBClient) GetBlockByHash(hash string) (*models.Block, error) {
 
 	var block models.Block
 
-	var originalHash, parentHash, transactionsRoot, receiptsRoot, delegatesRaw []byte
+	var originalHash, parentHash, transactionsRoot, receiptsRoot, delegatesRaw, producer []byte
 
 	rows.Next()
 	rows.Scan(&block.Number,
@@ -226,7 +228,8 @@ func (cli *DBClient) GetBlockByHash(hash string) (*models.Block, error) {
 		&block.TransactionCount,
 		&block.GasUsed,
 		&block.GasLimit,
-		&delegatesRaw)
+		&delegatesRaw,
+		&producer)
 	if err = rows.Err(); err != nil {
 		return nil, err
 	}
@@ -251,6 +254,7 @@ func (cli *DBClient) GetBlockByHash(hash string) (*models.Block, error) {
 	}
 
 	block.Delegates = delegates
+	block.Producer.SetBytes(producer)
 
 	return &block, nil
 }
@@ -267,7 +271,7 @@ func (cli *DBClient) GetBlockRange(fromNumber, rng uint32) ([]models.Block, erro
 
 	for rows.Next() {
 		var block models.Block
-		var hash, parentHash, transactionsRoot, receiptsRoot, delegatesRaw []byte
+		var hash, parentHash, transactionsRoot, receiptsRoot, delegatesRaw, producer []byte
 		rows.Scan(&block.Number,
 			&block.TimeStamp,
 			&hash,
@@ -278,7 +282,8 @@ func (cli *DBClient) GetBlockRange(fromNumber, rng uint32) ([]models.Block, erro
 			&block.TransactionCount,
 			&block.GasUsed,
 			&block.GasLimit,
-			&delegatesRaw)
+			&delegatesRaw,
+			&producer)
 		if err = rows.Err(); err != nil {
 			return nil, err
 		}
@@ -298,6 +303,7 @@ func (cli *DBClient) GetBlockRange(fromNumber, rng uint32) ([]models.Block, erro
 		}
 
 		block.Delegates = delegates
+		block.Producer.SetBytes(producer)
 
 		result = append(result, block)
 	}
@@ -574,7 +580,8 @@ func (cli *DBClient) InsertBlocks(blocks []*models.Block) error {
 		"transaction_count",
 		"gas_used",
 		"gas_limit",
-		"delegates"))
+		"delegates",
+		"producer"))
 
 	if err != nil {
 		return err
@@ -597,6 +604,7 @@ func (cli *DBClient) InsertBlocks(blocks []*models.Block) error {
 			bl.GasUsed,
 			bl.GasLimit,
 			dbytes,
+			bl.Producer,
 		)
 
 		if err != nil {

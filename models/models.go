@@ -24,6 +24,7 @@ type Block struct {
 	GasLimit         hexutil.Uint64   `json:"gasLimit"`
 	Transactions     []common.Hash    `json:"transactions"`
 	Delegates        []common.Address `json:"delegates"`
+	Producer         common.Address   `json:"Producer"`
 }
 
 type JSONBlock Block
@@ -44,6 +45,7 @@ func (b Block) MarshalJSON() ([]byte, error) {
 		GasUsed          uint64           `json:"gasUsed"`
 		GasLimit         uint64           `json:"gasLimit"`
 		Delegates        []common.Address `json:"delegates"`
+		Producer         common.Address   `json:"producer"`
 	}
 
 	enc.Number = uint64(b.Number)
@@ -57,6 +59,7 @@ func (b Block) MarshalJSON() ([]byte, error) {
 	enc.GasUsed = uint64(b.GasUsed)
 	enc.GasLimit = uint64(b.GasLimit)
 	enc.Delegates = b.Delegates
+	enc.Producer = b.Producer
 
 	return json.Marshal(&enc)
 }
