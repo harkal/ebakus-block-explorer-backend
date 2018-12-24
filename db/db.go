@@ -503,7 +503,7 @@ func (cli *DBClient) InsertTransactions(transactions []models.TransactionFull) e
 		txr := txf.Txr
 		log.Println("Adding", tx.BlockNumber, tx.TransactionIndex, tx.Input)
 
-		v := tx.Value / 10000 // stupid go postgres driver
+		v := tx.Value.ToInt() // stupid go postgres driver
 		_, err := stmt.Exec(
 			tx.Hash.Bytes(),
 			tx.Timestamp,
