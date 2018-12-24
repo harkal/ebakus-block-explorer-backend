@@ -3,6 +3,7 @@ package models
 import (
 	"encoding/hex"
 	"encoding/json"
+	"math/big"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
@@ -78,7 +79,7 @@ type Transaction struct {
 	TransactionIndex hexutil.Uint64 `json:"transactionIndex"`
 	From             common.Address `json:"from"`
 	To               common.Address `json:"to"`
-	Value            hexutil.Uint64 `json:"value"`
+	Value            hexutil.Big    `json:"value"`
 	GasLimit         hexutil.Uint64 `json:"gas"`
 	GasPrice         hexutil.Uint64 `json:"gasPrice"`
 	WorkNonce        hexutil.Uint64 `json:"workNonce"`
@@ -118,7 +119,7 @@ func (t Transaction) MarshalJSON() ([]byte, error) {
 		TransactionIndex uint64         `json:"transactionIndex"`
 		From             common.Address `json:"from"`
 		To               common.Address `json:"to"`
-		Value            uint64         `json:"value"`
+		Value            *big.Int       `json:"value"`
 		GasLimit         uint64         `json:"gas"`
 		GasPrice         uint64         `json:"gasPrice"`
 		WorkNonce        uint64         `json:"workNonce"`
@@ -133,7 +134,7 @@ func (t Transaction) MarshalJSON() ([]byte, error) {
 	enc.TransactionIndex = uint64(t.TransactionIndex)
 	enc.From = t.From
 	enc.To = t.To
-	enc.Value = uint64(t.Value)
+	enc.Value = t.Value.ToInt()
 	enc.GasLimit = uint64(t.GasLimit)
 	enc.GasPrice = uint64(t.GasPrice)
 	enc.WorkNonce = uint64(t.WorkNonce)
@@ -176,7 +177,7 @@ func (tf TransactionFull) MarshalJSON() ([]byte, error) {
 		TransactionIndex uint64         `json:"transactionIndex"`
 		From             common.Address `json:"from"`
 		To               common.Address `json:"to"`
-		Value            uint64         `json:"value"`
+		Value            *big.Int       `json:"value"`
 		GasUsed          uint64         `json:"gasUsed"`
 		GasLimit         uint64         `json:"gasLimit"`
 		GasPrice         uint64         `json:"gasPrice"`
@@ -196,7 +197,7 @@ func (tf TransactionFull) MarshalJSON() ([]byte, error) {
 	enc.TransactionIndex = uint64(t.TransactionIndex)
 	enc.From = t.From
 	enc.To = t.To
-	enc.Value = uint64(t.Value) << 1
+	enc.Value = t.Value.ToInt()
 	enc.GasUsed = uint64(r.GasUsed)
 	enc.GasLimit = uint64(t.GasLimit)
 	enc.GasPrice = uint64(t.GasPrice)
