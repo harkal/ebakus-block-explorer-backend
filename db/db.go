@@ -24,6 +24,11 @@ type DBClient struct {
 
 var client *DBClient
 
+var (
+	valueDecimalPoints = int64(4)
+	precisionFactor    = new(big.Int).Exp(big.NewInt(10), big.NewInt(18-valueDecimalPoints), nil)
+)
+
 func makeConnString(name, host string, port int, user string, pass string) (string, error) {
 	templ, err := template.New("psql_connection_string").Parse("postgres://{{.User}}:{{.Pass}}@{{.Host}}:{{.Port}}/{{.Name}}?sslmode=disable")
 
@@ -346,7 +351,7 @@ func (cli *DBClient) GetTransactionByHash(hash string) (*models.TransactionFull,
 	tx.BlockHash.SetBytes(blockHash)
 	tx.From.SetBytes(addrfrom)
 	tx.To.SetBytes(addrto)
-	tx.Value = (hexutil.Big)(*new(big.Int).Mul(new(big.Int).SetUint64(value), new(big.Int).Exp(big.NewInt(10), big.NewInt(14), nil))) // value * ether (1e18) / 10000
+	tx.Value = (hexutil.Big)(*new(big.Int).Mul(new(big.Int).SetUint64(value), precisionFactor)) // value * ether (1e18) / 10000
 
 	tx.Input = input
 
@@ -508,7 +513,7 @@ func (cli *DBClient) InsertTransactions(transactions []models.TransactionFull) e
 		log.Println("Adding", tx.BlockNumber, tx.TransactionIndex, tx.Input)
 
 		// value * 10000 / ether (1e18)
-		v := new(big.Int).Div(tx.Value.ToInt(), new(big.Int).Exp(big.NewInt(10), big.NewInt(14), nil)).Uint64() // stupid go postgres driver
+		v := new(big.Int).Div(tx.Value.ToInt(), precisionFactor).Uint64() // stupid go postgres driver
 		_, err := stmt.Exec(
 			tx.Hash.Bytes(),
 			tx.Timestamp,
