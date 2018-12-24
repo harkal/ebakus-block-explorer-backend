@@ -6,12 +6,14 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"math/big"
 	"strings"
 	"text/template"
 
 	"bitbucket.org/pantelisss/ebakus_server/models"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/lib/pq"
 	cli "gopkg.in/urfave/cli.v1"
 )
@@ -318,6 +320,7 @@ func (cli *DBClient) GetTransactionByHash(hash string) (*models.TransactionFull,
 	var txr models.TransactionReceipt
 
 	var originalHash, blockHash, addrfrom, addrto, input []byte
+	var value uint64
 
 	rows.Next()
 	rows.Scan(&originalHash,
@@ -327,7 +330,7 @@ func (cli *DBClient) GetTransactionByHash(hash string) (*models.TransactionFull,
 		&tx.TransactionIndex,
 		&addrfrom,
 		&addrto,
-		&tx.Value,
+		&value,
 		&tx.GasLimit,
 		&txr.GasUsed,
 		&tx.GasPrice,
@@ -343,6 +346,7 @@ func (cli *DBClient) GetTransactionByHash(hash string) (*models.TransactionFull,
 	tx.BlockHash.SetBytes(blockHash)
 	tx.From.SetBytes(addrfrom)
 	tx.To.SetBytes(addrto)
+	tx.Value = (hexutil.Big)(*new(big.Int).Mul(new(big.Int).SetUint64(value), new(big.Int).Exp(big.NewInt(10), big.NewInt(14), nil))) // value * ether (1e18) / 10000
 
 	tx.Input = input
 
@@ -503,7 +507,8 @@ func (cli *DBClient) InsertTransactions(transactions []models.TransactionFull) e
 		txr := txf.Txr
 		log.Println("Adding", tx.BlockNumber, tx.TransactionIndex, tx.Input)
 
-		v := tx.Value.ToInt() // stupid go postgres driver
+		// value * 10000 / ether (1e18)
+		v := new(big.Int).Div(tx.Value.ToInt(), new(big.Int).Exp(big.NewInt(10), big.NewInt(14), nil)).Uint64() // stupid go postgres driver
 		_, err := stmt.Exec(
 			tx.Hash.Bytes(),
 			tx.Timestamp,
