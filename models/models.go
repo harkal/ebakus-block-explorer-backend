@@ -169,21 +169,22 @@ func (t *InputData) UnmarshalJSON(b []byte) error {
 func (tf TransactionFull) MarshalJSON() ([]byte, error) {
 	// Struct with only the fields we want in the final JSON?
 	var enc struct {
-		Hash             common.Hash    `json:"hash"`
-		Timestamp        uint64         `json:"timestamp"`
-		Status           uint64         `json:"status"`
-		Nonce            uint64         `json:"nonce"`
-		BlockHash        common.Hash    `json:"blockHash"`
-		BlockNumber      uint64         `json:"blockNumber"`
-		TransactionIndex uint64         `json:"transactionIndex"`
-		From             common.Address `json:"from"`
-		To               common.Address `json:"to"`
-		Value            *big.Int       `json:"value"`
-		GasUsed          uint64         `json:"gasUsed"`
-		GasLimit         uint64         `json:"gasLimit"`
-		GasPrice         uint64         `json:"gasPrice"`
-		WorkNonce        uint64         `json:"workNonce"`
-		Input            string         `json:"input"`
+		Hash              common.Hash    `json:"hash"`
+		Timestamp         uint64         `json:"timestamp"`
+		Status            uint64         `json:"status"`
+		Nonce             uint64         `json:"nonce"`
+		BlockHash         common.Hash    `json:"blockHash"`
+		BlockNumber       uint64         `json:"blockNumber"`
+		TransactionIndex  uint64         `json:"transactionIndex"`
+		From              common.Address `json:"from"`
+		To                common.Address `json:"to"`
+		Value             *big.Int       `json:"value"`
+		GasUsed           uint64         `json:"gasUsed"`
+		CumulativeGasUsed uint64         `json:"cumulativeGasUsed"`
+		GasLimit          uint64         `json:"gasLimit"`
+		GasPrice          uint64         `json:"gasPrice"`
+		WorkNonce         uint64         `json:"workNonce"`
+		Input             string         `json:"input"`
 	}
 
 	t := tf.Tx
@@ -200,6 +201,7 @@ func (tf TransactionFull) MarshalJSON() ([]byte, error) {
 	enc.To = t.To
 	enc.Value = t.Value.ToInt()
 	enc.GasUsed = uint64(r.GasUsed)
+	enc.CumulativeGasUsed = uint64(r.CumulativeGasUsed)
 	enc.GasLimit = uint64(t.GasLimit)
 	enc.GasPrice = uint64(t.GasPrice)
 	enc.WorkNonce = uint64(t.WorkNonce)

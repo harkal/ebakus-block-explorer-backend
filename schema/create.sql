@@ -27,6 +27,7 @@ CREATE TABLE transactions (
   value BIGINT,
   gasLimit BIGINT,
   gasUsed BIGINT,
+  cumulativeGasUsed BIGINT,
   gasPrice BIGINT,
   input bytea,
   status BIGINT,
