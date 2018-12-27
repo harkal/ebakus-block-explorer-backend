@@ -171,7 +171,8 @@ func (cli *DBClient) GetBlockByID(number uint64) (*models.Block, error) {
 		&block.GasUsed,
 		&block.GasLimit,
 		&delegatesRaw,
-		&producer)
+		&producer,
+		&block.Signature)
 	if err = rows.Err(); err != nil {
 		return nil, err
 	}
@@ -229,7 +230,8 @@ func (cli *DBClient) GetBlockByHash(hash string) (*models.Block, error) {
 		&block.GasUsed,
 		&block.GasLimit,
 		&delegatesRaw,
-		&producer)
+		&producer,
+		&block.Signature)
 	if err = rows.Err(); err != nil {
 		return nil, err
 	}
@@ -283,7 +285,8 @@ func (cli *DBClient) GetBlockRange(fromNumber, rng uint32) ([]models.Block, erro
 			&block.GasUsed,
 			&block.GasLimit,
 			&delegatesRaw,
-			&producer)
+			&producer,
+			&block.Signature)
 		if err = rows.Err(); err != nil {
 			return nil, err
 		}
@@ -581,7 +584,8 @@ func (cli *DBClient) InsertBlocks(blocks []*models.Block) error {
 		"gas_used",
 		"gas_limit",
 		"delegates",
-		"producer"))
+		"producer",
+		"signature"))
 
 	if err != nil {
 		return err
@@ -605,6 +609,7 @@ func (cli *DBClient) InsertBlocks(blocks []*models.Block) error {
 			bl.GasLimit,
 			dbytes,
 			bl.Producer,
+			bl.Signature,
 		)
 
 		if err != nil {
