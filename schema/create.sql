@@ -30,8 +30,7 @@ CREATE TABLE transactions (
   gasPrice BIGINT,
   input bytea,
   status BIGINT,
-
-  WorkNonce BIGINT,
+  workNonce BIGINT,
   timestamp BIGINT
 );
 
