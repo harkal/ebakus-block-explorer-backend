@@ -1,15 +1,16 @@
 CREATE TABLE blocks (
-  number BIGINT PRIMARY KEY, 
-  timestamp BIGINT, 
-  hash bytea, 
-  parent_hash bytea, 
-  transactions_root bytea, 
+  number BIGINT PRIMARY KEY,
+  timestamp BIGINT,
+  hash bytea,
+  parent_hash bytea,
+  transactions_root bytea,
   receipts_root bytea,
   size INT,
   transaction_count INT,
   gas_used BIGINT,
   gas_limit BIGINT,
   delegates bytea,
+  producer bytea,
   signature bytea
 );
 
@@ -26,11 +27,11 @@ CREATE TABLE transactions (
   value BIGINT,
   gasLimit BIGINT,
   gasUsed BIGINT,
+  cumulativeGasUsed BIGINT,
   gasPrice BIGINT,
   input bytea,
   status BIGINT,
-
-  WorkNonce BIGINT,
+  workNonce BIGINT,
   timestamp BIGINT
 );
 
