@@ -27,7 +27,7 @@ type Block struct {
 	GasLimit         hexutil.Uint64   `json:"gasLimit"`
 	Transactions     []common.Hash    `json:"transactions"`
 	Delegates        []common.Address `json:"delegates"`
-	Producer         common.Address   `json:"Producer"`
+	Producer         common.Address   `json:"producer"`
 }
 
 type JSONBlock Block
