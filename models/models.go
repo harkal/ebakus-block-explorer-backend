@@ -140,7 +140,7 @@ func (t Transaction) MarshalJSON() ([]byte, error) {
 	enc.GasPrice = uint64(t.GasPrice)
 	enc.WorkNonce = uint64(t.WorkNonce)
 
-	enc.Input = hex.EncodeToString(t.Input)
+	enc.Input = "0x" + hex.EncodeToString(t.Input)
 
 	return json.Marshal(&enc)
 }
