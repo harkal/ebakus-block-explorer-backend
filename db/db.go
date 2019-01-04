@@ -448,6 +448,7 @@ func (cli *DBClient) GetTransactionsByAddress(address string, addrtype models.Ad
 		var txr models.TransactionReceipt
 
 		var originalHash, blockHash, addrfrom, addrto, input []byte
+		var value uint64
 
 		rows.Scan(&originalHash,
 			&tx.Nonce,
@@ -456,7 +457,7 @@ func (cli *DBClient) GetTransactionsByAddress(address string, addrtype models.Ad
 			&tx.TransactionIndex,
 			&addrfrom,
 			&addrto,
-			&tx.Value,
+			&value,
 			&tx.GasLimit,
 			&txr.GasUsed,
 			&txr.CumulativeGasUsed,
@@ -474,6 +475,7 @@ func (cli *DBClient) GetTransactionsByAddress(address string, addrtype models.Ad
 		tx.BlockHash.SetBytes(blockHash)
 		tx.From.SetBytes(addrfrom)
 		tx.To.SetBytes(addrto)
+		tx.Value = (hexutil.Big)(*new(big.Int).Mul(new(big.Int).SetUint64(value), precisionFactor)) // value * ether (1e18) / 10000
 
 		tx.Input = input
 
