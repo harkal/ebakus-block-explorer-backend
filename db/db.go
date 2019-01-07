@@ -27,6 +27,7 @@ var client *DBClient
 var (
 	valueDecimalPoints = int64(4)
 	precisionFactor    = new(big.Int).Exp(big.NewInt(10), big.NewInt(18-valueDecimalPoints), nil)
+	bigIntZero         = new(big.Int).SetUint64(0)
 )
 
 func makeConnString(name, host string, port int, user string, pass string) (string, error) {
@@ -333,7 +334,10 @@ func (cli *DBClient) GetTransactionByHash(hash string) (*models.TransactionFull,
 	var originalHash, blockHash, addrfrom, addrto, input []byte
 	var value uint64
 
-	rows.Next()
+	if foundData := rows.Next(); !foundData {
+		return &models.TransactionFull{Tx: nil, Txr: nil}, nil
+	}
+
 	rows.Scan(&originalHash,
 		&tx.Nonce,
 		&blockHash,
@@ -366,24 +370,23 @@ func (cli *DBClient) GetTransactionByHash(hash string) (*models.TransactionFull,
 	return &models.TransactionFull{Tx: &tx, Txr: &txr}, nil
 }
 
-func (cli *DBClient) GetAddressTotals(address string) (sumIn, sumOut float64, countIn, countOut uint64, err error) {
+func (cli *DBClient) GetAddressTotals(address string) (sumIn, sumOut *big.Int, countIn, countOut uint64, err error) {
 
 	query := strings.Join([]string{"SELECT count(value), sum(value) FROM transactions WHERE addr_to = E'\\\\", address[1:], "'"}, "")
 	fmt.Println(query)
 	rows, err := cli.db.Query(query)
 
 	if err != nil {
-		return 0, 0, 0, 0, err
+		return bigIntZero, bigIntZero, 0, 0, err
 	}
 	defer rows.Close()
 
-	var sumInEbakus float64
+	var sumInEbakus uint64
 
 	rows.Next()
-	rows.Scan(&countIn,
-		&sumInEbakus)
+	rows.Scan(&countIn, &sumInEbakus)
 	if err = rows.Err(); err != nil {
-		return 0, 0, 0, 0, err
+		return bigIntZero, bigIntZero, 0, 0, err
 	}
 
 	query = strings.Join([]string{"SELECT count(value), sum(value) FROM transactions WHERE addr_from = E'\\\\", address[1:], "'"}, "")
@@ -391,20 +394,20 @@ func (cli *DBClient) GetAddressTotals(address string) (sumIn, sumOut float64, co
 	rows, err = cli.db.Query(query)
 
 	if err != nil {
-		return 0, 0, 0, 0, err
+		return bigIntZero, bigIntZero, 0, 0, err
 	}
 	defer rows.Close()
 
-	var sumOutEbakus float64
+	var sumOutEbakus uint64
 
 	rows.Next()
 	rows.Scan(&countOut, &sumOutEbakus)
 	if err = rows.Err(); err != nil {
-		return 0, 0, 0, 0, err
+		return bigIntZero, bigIntZero, 0, 0, err
 	}
 
-	sumIn = sumInEbakus * 2.0
-	sumOut = sumOutEbakus * 2.0
+	sumIn = new(big.Int).Mul(new(big.Int).SetUint64(sumInEbakus), precisionFactor)
+	sumOut = new(big.Int).Mul(new(big.Int).SetUint64(sumOutEbakus), precisionFactor)
 
 	return
 }
