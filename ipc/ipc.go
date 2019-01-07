@@ -102,7 +102,7 @@ func (ipc *IPCInterface) StreamTransactions(wg *sync.WaitGroup, db *db.DBClient,
 	for obj := range hashCh {
 		tx, txr, err := ipc.GetTransactionByHash(&obj.Hash)
 		if err != nil {
-			log.Println("Error getTransaction ipc:", err)
+			log.Println("Error getTransaction ipc:", err, "hash", obj.Hash.Hex())
 			continue
 		}
 
