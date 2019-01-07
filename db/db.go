@@ -314,6 +314,69 @@ func (cli *DBClient) GetBlockRange(fromNumber, rng uint32) ([]models.Block, erro
 	return result, nil
 }
 
+// GetTransactionRange finds and returns the transactions in a specific range
+func (cli *DBClient) GetTransactionRange(hash string, rng uint32) ([]models.TransactionFull, error) {
+
+	var query string
+	// get latest txs
+	if hash == "-1" {
+		query = "SELECT * FROM transactions ORDER BY timestamp DESC LIMIT $1"
+
+		// get latest txs after hash
+	} else {
+		query = strings.Join([]string{"SELECT * FROM transactions WHERE timestamp >= (SELECT timestamp FROM transactions WHERE hash = E'\\\\", hash[1:], "') ORDER BY timestamp DESC LIMIT $1"}, "")
+	}
+
+	rows, err := cli.db.Query(query, rng)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var result []models.TransactionFull
+
+	for rows.Next() {
+		var tx models.Transaction
+		var txr models.TransactionReceipt
+
+		var originalHash, blockHash, addrfrom, addrto, input []byte
+		var value uint64
+
+		rows.Scan(&originalHash,
+			&tx.Nonce,
+			&blockHash,
+			&tx.BlockNumber,
+			&tx.TransactionIndex,
+			&addrfrom,
+			&addrto,
+			&value,
+			&tx.GasLimit,
+			&txr.GasUsed,
+			&txr.CumulativeGasUsed,
+			&tx.GasPrice,
+			&input,
+			&txr.Status,
+			&tx.WorkNonce,
+			&tx.Timestamp)
+		if err = rows.Err(); err != nil {
+			return nil, err
+		}
+
+		tx.Hash = common.BytesToHash(originalHash)
+		tx.BlockHash.SetBytes(blockHash)
+		tx.From.SetBytes(addrfrom)
+		tx.To.SetBytes(addrto)
+		tx.Value = (hexutil.Big)(*new(big.Int).Mul(new(big.Int).SetUint64(value), precisionFactor)) // value * ether (1e18) / 10000
+
+		tx.Input = input
+
+		txf := models.TransactionFull{Tx: &tx, Txr: &txr}
+		result = append(result, txf)
+	}
+
+	return result, nil
+}
+
 // GetTransactionByHash finds and returns the transaction with the provided Hash
 func (cli *DBClient) GetTransactionByHash(hash string) (*models.TransactionFull, error) {
 	// Query for bytea value with the hex method, pass from char [1,end) since
