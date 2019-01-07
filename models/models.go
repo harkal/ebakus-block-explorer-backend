@@ -72,19 +72,19 @@ func (b Block) MarshalJSON() ([]byte, error) {
 type InputData []byte
 
 type Transaction struct {
-	Hash             common.Hash    `json:"hash"`
-	Timestamp        hexutil.Uint64 `json:"timestamp"`
-	Nonce            hexutil.Uint64 `json:"nonce"`
-	BlockHash        common.Hash    `json:"blockHash"`
-	BlockNumber      hexutil.Uint64 `json:"blockNumber"`
-	TransactionIndex hexutil.Uint64 `json:"transactionIndex"`
-	From             common.Address `json:"from"`
-	To               common.Address `json:"to"`
-	Value            hexutil.Big    `json:"value"`
-	GasLimit         hexutil.Uint64 `json:"gas"`
-	GasPrice         hexutil.Uint64 `json:"gasPrice"`
-	WorkNonce        hexutil.Uint64 `json:"workNonce"`
-	Input            InputData      `json:"input"`
+	Hash             common.Hash     `json:"hash"`
+	Timestamp        hexutil.Uint64  `json:"timestamp"`
+	Nonce            hexutil.Uint64  `json:"nonce"`
+	BlockHash        common.Hash     `json:"blockHash"`
+	BlockNumber      hexutil.Uint64  `json:"blockNumber"`
+	TransactionIndex hexutil.Uint64  `json:"transactionIndex"`
+	From             common.Address  `json:"from"`
+	To               *common.Address `json:"to"`
+	Value            hexutil.Big     `json:"value"`
+	GasLimit         hexutil.Uint64  `json:"gas"`
+	GasPrice         hexutil.Uint64  `json:"gasPrice"`
+	WorkNonce        hexutil.Uint64  `json:"workNonce"`
+	Input            InputData       `json:"input"`
 }
 
 type TransactionReceipt struct {
@@ -112,19 +112,19 @@ const (
 func (t Transaction) MarshalJSON() ([]byte, error) {
 	// Struct with only the fields we want in the final JSON?
 	var enc struct {
-		Hash             common.Hash    `json:"hash"`
-		Timestamp        uint64         `json:"timestamp"`
-		Nonce            uint64         `json:"nonce"`
-		BlockHash        common.Hash    `json:"blockHash"`
-		BlockNumber      uint64         `json:"blockNumber"`
-		TransactionIndex uint64         `json:"transactionIndex"`
-		From             common.Address `json:"from"`
-		To               common.Address `json:"to"`
-		Value            *big.Int       `json:"value"`
-		GasLimit         uint64         `json:"gas"`
-		GasPrice         uint64         `json:"gasPrice"`
-		WorkNonce        uint64         `json:"workNonce"`
-		Input            string         `json:"input"`
+		Hash             common.Hash     `json:"hash"`
+		Timestamp        uint64          `json:"timestamp"`
+		Nonce            uint64          `json:"nonce"`
+		BlockHash        common.Hash     `json:"blockHash"`
+		BlockNumber      uint64          `json:"blockNumber"`
+		TransactionIndex uint64          `json:"transactionIndex"`
+		From             common.Address  `json:"from"`
+		To               *common.Address `json:"to"`
+		Value            *big.Int        `json:"value"`
+		GasLimit         uint64          `json:"gas"`
+		GasPrice         uint64          `json:"gasPrice"`
+		WorkNonce        uint64          `json:"workNonce"`
+		Input            string          `json:"input"`
 	}
 
 	enc.Hash = t.Hash
@@ -169,22 +169,22 @@ func (t *InputData) UnmarshalJSON(b []byte) error {
 func (tf TransactionFull) MarshalJSON() ([]byte, error) {
 	// Struct with only the fields we want in the final JSON?
 	var enc struct {
-		Hash              common.Hash    `json:"hash"`
-		Timestamp         uint64         `json:"timestamp"`
-		Status            uint64         `json:"status"`
-		Nonce             uint64         `json:"nonce"`
-		BlockHash         common.Hash    `json:"blockHash"`
-		BlockNumber       uint64         `json:"blockNumber"`
-		TransactionIndex  uint64         `json:"transactionIndex"`
-		From              common.Address `json:"from"`
-		To                common.Address `json:"to"`
-		Value             *big.Int       `json:"value"`
-		GasUsed           uint64         `json:"gasUsed"`
-		CumulativeGasUsed uint64         `json:"cumulativeGasUsed"`
-		GasLimit          uint64         `json:"gasLimit"`
-		GasPrice          uint64         `json:"gasPrice"`
-		WorkNonce         uint64         `json:"workNonce"`
-		Input             string         `json:"input"`
+		Hash              common.Hash     `json:"hash"`
+		Timestamp         uint64          `json:"timestamp"`
+		Status            uint64          `json:"status"`
+		Nonce             uint64          `json:"nonce"`
+		BlockHash         common.Hash     `json:"blockHash"`
+		BlockNumber       uint64          `json:"blockNumber"`
+		TransactionIndex  uint64          `json:"transactionIndex"`
+		From              common.Address  `json:"from"`
+		To                *common.Address `json:"to"`
+		Value             *big.Int        `json:"value"`
+		GasUsed           uint64          `json:"gasUsed"`
+		CumulativeGasUsed uint64          `json:"cumulativeGasUsed"`
+		GasLimit          uint64          `json:"gasLimit"`
+		GasPrice          uint64          `json:"gasPrice"`
+		WorkNonce         uint64          `json:"workNonce"`
+		Input             string          `json:"input"`
 	}
 
 	t := tf.Tx
