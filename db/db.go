@@ -366,7 +366,8 @@ func (cli *DBClient) GetTransactionRange(hash string, rng uint32) ([]models.Tran
 		tx.Hash = common.BytesToHash(originalHash)
 		tx.BlockHash.SetBytes(blockHash)
 		tx.From.SetBytes(addrfrom)
-		tx.To.SetBytes(addrto)
+		addressTo := common.BytesToAddress(addrto)
+		tx.To = &addressTo
 		tx.Value = (hexutil.Big)(*new(big.Int).Mul(new(big.Int).SetUint64(value), precisionFactor)) // value * ether (1e18) / 10000
 
 		tx.Input = input
@@ -436,7 +437,7 @@ func (cli *DBClient) GetTransactionByHash(hash string) (*models.TransactionFull,
 func (cli *DBClient) GetAddressTotals(address string) (sumIn, sumOut *big.Int, countIn, countOut uint64, err error) {
 
 	query := strings.Join([]string{"SELECT count(value), sum(value) FROM transactions WHERE addr_to = E'\\\\", address[1:], "'"}, "")
-	fmt.Println(query)
+
 	rows, err := cli.db.Query(query)
 
 	if err != nil {
