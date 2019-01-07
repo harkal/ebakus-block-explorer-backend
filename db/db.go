@@ -333,7 +333,10 @@ func (cli *DBClient) GetTransactionByHash(hash string) (*models.TransactionFull,
 	var originalHash, blockHash, addrfrom, addrto, input []byte
 	var value uint64
 
-	rows.Next()
+	if foundData := rows.Next(); !foundData {
+		return &models.TransactionFull{Tx: nil, Txr: nil}, nil
+	}
+
 	rows.Scan(&originalHash,
 		&tx.Nonce,
 		&blockHash,
