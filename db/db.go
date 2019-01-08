@@ -395,7 +395,7 @@ func (cli *DBClient) GetTransactionByHash(hash string) (*models.TransactionFull,
 	var tx models.Transaction
 	var txr models.TransactionReceipt
 
-	var originalHash, blockHash, addrfrom, addrto, input []byte
+	var originalHash, blockHash, addrfrom, addrto, addrContract, input []byte
 	var value uint64
 
 	if foundData := rows.Next(); !foundData {
@@ -414,6 +414,7 @@ func (cli *DBClient) GetTransactionByHash(hash string) (*models.TransactionFull,
 		&txr.GasUsed,
 		&txr.CumulativeGasUsed,
 		&tx.GasPrice,
+		&addrContract,
 		&input,
 		&txr.Status,
 		&tx.WorkNonce,
@@ -429,6 +430,8 @@ func (cli *DBClient) GetTransactionByHash(hash string) (*models.TransactionFull,
 	tx.To = &addressTo
 	tx.Value = (hexutil.Big)(*new(big.Int).Mul(new(big.Int).SetUint64(value), precisionFactor)) // value * ether (1e18) / 10000
 
+	contractAddress := common.BytesToAddress(addrContract)
+	txr.ContractAddress = &contractAddress
 	tx.Input = input
 
 	return &models.TransactionFull{Tx: &tx, Txr: &txr}, nil
@@ -515,7 +518,7 @@ func (cli *DBClient) GetTransactionsByAddress(address string, addrtype models.Ad
 		var tx models.Transaction
 		var txr models.TransactionReceipt
 
-		var originalHash, blockHash, addrfrom, addrto, input []byte
+		var originalHash, blockHash, addrfrom, addrto, addrContract, input []byte
 		var value uint64
 
 		rows.Scan(&originalHash,
@@ -530,6 +533,7 @@ func (cli *DBClient) GetTransactionsByAddress(address string, addrtype models.Ad
 			&txr.GasUsed,
 			&txr.CumulativeGasUsed,
 			&tx.GasPrice,
+			&addrContract,
 			&input,
 			&txr.Status,
 			&tx.WorkNonce,
@@ -546,6 +550,8 @@ func (cli *DBClient) GetTransactionsByAddress(address string, addrtype models.Ad
 		tx.To = &addressTo
 		tx.Value = (hexutil.Big)(*new(big.Int).Mul(new(big.Int).SetUint64(value), precisionFactor)) // value * ether (1e18) / 10000
 
+		contractAddress := common.BytesToAddress(addrContract)
+		txr.ContractAddress = &contractAddress
 		tx.Input = input
 
 		result = append(result, models.TransactionFull{Tx: &tx, Txr: &txr})
@@ -581,6 +587,7 @@ func (cli *DBClient) InsertTransactions(transactions []models.TransactionFull) e
 		"gas_limit",
 		"gas_price",
 		"work_nonce",
+		"contract_address",
 		"input"))
 
 	if err != nil {
@@ -594,9 +601,12 @@ func (cli *DBClient) InsertTransactions(transactions []models.TransactionFull) e
 
 		// value * 10000 / ether (1e18)
 		v := new(big.Int).Div(tx.Value.ToInt(), precisionFactor).Uint64() // stupid go postgres driver
-		var to []byte
+		var to, contractAddress []byte
 		if tx.To != nil {
 			to = tx.To.Bytes()
+		}
+		if txr.ContractAddress != nil {
+			contractAddress = txr.ContractAddress.Bytes()
 		}
 
 		_, err := stmt.Exec(
@@ -615,6 +625,7 @@ func (cli *DBClient) InsertTransactions(transactions []models.TransactionFull) e
 			tx.GasLimit,
 			tx.GasPrice,
 			tx.WorkNonce,
+			contractAddress,
 			tx.Input,
 		)
 

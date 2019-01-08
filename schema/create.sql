@@ -29,6 +29,7 @@ CREATE TABLE transactions (
   gas_used BIGINT,
   cumulative_gas_used BIGINT,
   gas_price BIGINT,
+  contract_address bytea,
   input bytea,
   status BIGINT,
   work_nonce BIGINT,

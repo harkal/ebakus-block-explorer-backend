@@ -88,9 +88,10 @@ type Transaction struct {
 }
 
 type TransactionReceipt struct {
-	Status            hexutil.Uint64 `json:"status"`
-	GasUsed           hexutil.Uint64 `json:"gasUsed"`
-	CumulativeGasUsed hexutil.Uint64 `json:"cumulativeGasUsed"`
+	Status            hexutil.Uint64  `json:"status"`
+	GasUsed           hexutil.Uint64  `json:"gasUsed"`
+	CumulativeGasUsed hexutil.Uint64  `json:"cumulativeGasUsed"`
+	ContractAddress   *common.Address `json:"contractAddress"`
 }
 
 type TransactionFull struct {
@@ -184,6 +185,7 @@ func (tf TransactionFull) MarshalJSON() ([]byte, error) {
 		GasLimit          uint64          `json:"gasLimit"`
 		GasPrice          uint64          `json:"gasPrice"`
 		WorkNonce         uint64          `json:"workNonce"`
+		ContractAddress   *common.Address `json:"contractAddress"`
 		Input             string          `json:"input"`
 	}
 
@@ -205,6 +207,7 @@ func (tf TransactionFull) MarshalJSON() ([]byte, error) {
 	enc.GasLimit = uint64(t.GasLimit)
 	enc.GasPrice = uint64(t.GasPrice)
 	enc.WorkNonce = uint64(t.WorkNonce)
+	enc.ContractAddress = r.ContractAddress
 	enc.Input = "0x" + hex.EncodeToString(t.Input)
 
 	return json.Marshal(&enc)
