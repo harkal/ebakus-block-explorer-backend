@@ -324,6 +324,8 @@ func HandleTxByAddress(w http.ResponseWriter, r *http.Request) {
 		txs, err = dbc.GetTransactionsByAddress(address, models.ADDRESS_ALL, offset, limit, orderString)
 	case "block":
 		txs, err = dbc.GetTransactionsByAddress(address, models.ADDRESS_BLOCKHASH, offset, limit, orderString)
+	case "latest":
+		txs, err = dbc.GetTransactionsByAddress(address, models.LATEST, offset, limit, orderString)
 	default:
 		http.Error(w, "error", http.StatusBadRequest)
 		return

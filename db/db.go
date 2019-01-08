@@ -418,20 +418,26 @@ func (cli *DBClient) GetTransactionsByAddress(address string, addrtype models.Ad
 	// Query for bytea value with the hex method, pass from char [1,end) since
 	// the required structure is E'\\xDEADBEEF'
 	// For more, check https://www.postgresql.org/docs/9.0/static/datatype-binary.html
-	var query string
+	query := "SELECT * FROM transactions"
+
 	switch addrtype {
 	case models.ADDRESS_TO:
-		query = strings.Join([]string{"SELECT * FROM transactions WHERE addr_to = E'\\\\", address[1:], "'"}, "")
+		query = strings.Join([]string{query, " WHERE addr_to = E'\\\\", address[1:], "'"}, "")
 	case models.ADDRESS_FROM:
-		query = strings.Join([]string{"SELECT * FROM transactions WHERE addr_from = E'\\\\", address[1:], "'"}, "")
+		query = strings.Join([]string{query, " WHERE addr_from = E'\\\\", address[1:], "'"}, "")
 	case models.ADDRESS_ALL:
-		query = strings.Join([]string{"SELECT * FROM transactions WHERE addr_to = E'\\\\", address[1:], "'", " or addr_from = E'\\\\", address[1:], "'"}, "")
+		query = strings.Join([]string{query, " WHERE addr_to = E'\\\\", address[1:], "'", " or addr_from = E'\\\\", address[1:], "'"}, "")
 	case models.ADDRESS_BLOCKHASH:
-		query = strings.Join([]string{"SELECT * FROM transactions WHERE block_hash = E'\\\\", address[1:], "'"}, "")
+		query = strings.Join([]string{query, " WHERE block_hash = E'\\\\", address[1:], "'"}, "")
 	}
 
 	if order != "asc" {
-		query = strings.Join([]string{query, " ORDER BY timestamp ", order}, "")
+		switch addrtype {
+		case models.LATEST:
+			query = strings.Join([]string{query, " ORDER BY block_number ", order}, "")
+		default:
+			query = strings.Join([]string{query, " ORDER BY timestamp ", order}, "")
+		}
 	}
 
 	query = strings.Join([]string{query, " OFFSET $1 LIMIT $2"}, "")
