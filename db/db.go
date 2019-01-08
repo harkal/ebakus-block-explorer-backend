@@ -14,6 +14,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/ethereum/go-ethereum/consensus/dpos"
 	"github.com/lib/pq"
 	cli "gopkg.in/urfave/cli.v1"
 )
@@ -434,14 +435,14 @@ func (cli *DBClient) GetTransactionByHash(hash string) (*models.TransactionFull,
 	return &models.TransactionFull{Tx: &tx, Txr: &txr}, nil
 }
 
-func (cli *DBClient) GetAddressTotals(address string) (sumIn, sumOut *big.Int, countIn, countOut uint64, err error) {
+func (cli *DBClient) GetAddressTotals(address string) (sumIn, sumOut, miningRewards *big.Int, countIn, countOut uint64, err error) {
 
 	query := strings.Join([]string{"SELECT count(value), sum(value) FROM transactions WHERE addr_to = E'\\\\", address[1:], "'"}, "")
 
 	rows, err := cli.db.Query(query)
 
 	if err != nil {
-		return bigIntZero, bigIntZero, 0, 0, err
+		return bigIntZero, bigIntZero, bigIntZero, 0, 0, err
 	}
 	defer rows.Close()
 
@@ -450,7 +451,7 @@ func (cli *DBClient) GetAddressTotals(address string) (sumIn, sumOut *big.Int, c
 	rows.Next()
 	rows.Scan(&countIn, &sumInEbakus)
 	if err = rows.Err(); err != nil {
-		return bigIntZero, bigIntZero, 0, 0, err
+		return bigIntZero, bigIntZero, bigIntZero, 0, 0, err
 	}
 
 	query = strings.Join([]string{"SELECT count(value), sum(value) FROM transactions WHERE addr_from = E'\\\\", address[1:], "'"}, "")
@@ -458,7 +459,7 @@ func (cli *DBClient) GetAddressTotals(address string) (sumIn, sumOut *big.Int, c
 	rows, err = cli.db.Query(query)
 
 	if err != nil {
-		return bigIntZero, bigIntZero, 0, 0, err
+		return bigIntZero, bigIntZero, bigIntZero, 0, 0, err
 	}
 	defer rows.Close()
 
@@ -467,7 +468,31 @@ func (cli *DBClient) GetAddressTotals(address string) (sumIn, sumOut *big.Int, c
 	rows.Next()
 	rows.Scan(&countOut, &sumOutEbakus)
 	if err = rows.Err(); err != nil {
-		return bigIntZero, bigIntZero, 0, 0, err
+		return bigIntZero, bigIntZero, bigIntZero, 0, 0, err
+	}
+
+	query = strings.Join([]string{"SELECT count(number) FROM blocks WHERE producer = E'\\\\", address[1:], "'"}, "")
+
+	rows, err = cli.db.Query(query)
+
+	if err != nil {
+		return bigIntZero, bigIntZero, bigIntZero, 0, 0, err
+	}
+	defer rows.Close()
+
+	var countMinedBlocks uint64
+
+	rows.Next()
+	rows.Scan(&countMinedBlocks)
+	if err = rows.Err(); err != nil {
+		return bigIntZero, bigIntZero, bigIntZero, 0, 0, err
+	}
+
+	// Accumulate the rewards for the miner, if any
+	if countMinedBlocks > 0 {
+		blockRewardUint64 := new(big.Int).Div(dpos.BlockReward, precisionFactor).Uint64() // convert from Wei
+		reward := new(big.Int).SetUint64(countMinedBlocks * blockRewardUint64)
+		miningRewards = new(big.Int).Mul(reward, precisionFactor)
 	}
 
 	sumIn = new(big.Int).Mul(new(big.Int).SetUint64(sumInEbakus), precisionFactor)
