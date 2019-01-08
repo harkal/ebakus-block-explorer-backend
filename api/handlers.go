@@ -164,6 +164,8 @@ func HandleTxByHash(w http.ResponseWriter, r *http.Request) {
 
 	vars := mux.Vars(r)
 
+	var txf *models.TransactionFull
+
 	hash, ok := vars["hash"]
 
 	if !ok {
@@ -172,62 +174,24 @@ func HandleTxByHash(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var res []byte
+	log.Println("Request Transaction by Hash:", hash)
 	var err error
+	txf, err = dbc.GetTransactionByHash(hash)
 
-	rngParam := r.URL.Query().Get("range")
-	if rngParam != "" {
-		rng, err := strconv.ParseUint(rngParam, 10, 32)
-		if err != nil {
-			log.Printf("! Error parsing range: %s", err.Error())
-			http.Error(w, "error", http.StatusBadRequest)
-			return
-		}
-
-		log.Println("Request Transactions after Hash:", hash)
-
-		if rng > 100 {
-			rng = 100
-		}
-
-		var txfs []models.TransactionFull
-		txfs, err = dbc.GetTransactionRange(hash, uint32(rng))
-
-		if err != nil {
-			log.Printf("! Error: %s", err.Error())
-			http.Error(w, "error", http.StatusInternalServerError)
-			return
-		}
-
-		if txfs == nil {
-			http.Error(w, "error", http.StatusNotFound)
-			return
-		}
-
-		res, err = json.Marshal(txfs)
-	} else {
-
-		var txf *models.TransactionFull
-
-		log.Println("Request Transaction by Hash:", hash)
-		var err error
-		txf, err = dbc.GetTransactionByHash(hash)
-
-		if err != nil {
-			log.Printf("! Error: %s", err.Error())
-			http.Error(w, "error", http.StatusInternalServerError)
-			return
-		}
-
-		tx := txf.Tx
-
-		if tx == nil {
-			http.Error(w, "error", http.StatusNotFound)
-			return
-		}
-
-		res, err = txf.MarshalJSON()
+	if err != nil {
+		log.Printf("! Error: %s", err.Error())
+		http.Error(w, "error", http.StatusInternalServerError)
+		return
 	}
+
+	tx := txf.Tx
+
+	if tx == nil {
+		http.Error(w, "error", http.StatusNotFound)
+		return
+	}
+
+	res, err := txf.MarshalJSON()
 
 	if err != nil {
 		log.Printf("! Error: %s", err.Error())
