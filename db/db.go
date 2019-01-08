@@ -576,11 +576,11 @@ func (cli *DBClient) InsertTransactions(transactions []models.TransactionFull) e
 		"addr_from",
 		"addr_to",
 		"value",
-		"gasused",
-		"cumulativegasused",
-		"gaslimit",
-		"gasprice",
-		"worknonce",
+		"gas_used",
+		"cumulative_gas_used",
+		"gas_limit",
+		"gas_price",
+		"work_nonce",
 		"input"))
 
 	if err != nil {
