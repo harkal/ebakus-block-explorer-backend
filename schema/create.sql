@@ -25,13 +25,14 @@ CREATE TABLE transactions (
   addr_from bytea,
   addr_to bytea,
   value BIGINT,
-  gasLimit BIGINT,
-  gasUsed BIGINT,
-  cumulativeGasUsed BIGINT,
-  gasPrice BIGINT,
+  gas_limit BIGINT,
+  gas_used BIGINT,
+  cumulative_gas_used BIGINT,
+  gas_price BIGINT,
+  contract_address bytea,
   input bytea,
   status BIGINT,
-  workNonce BIGINT,
+  work_nonce BIGINT,
   timestamp BIGINT
 );
 
