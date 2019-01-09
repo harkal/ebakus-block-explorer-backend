@@ -432,6 +432,8 @@ func (cli *DBClient) GetAddressTotals(address string) (sumIn, sumOut, blockRewar
 		blockRewardUint64 := new(big.Int).Div(dpos.BlockReward, precisionFactor).Uint64() // convert from Wei
 		reward := new(big.Int).SetUint64(countMinedBlocks * blockRewardUint64)
 		blockRewards = new(big.Int).Mul(reward, precisionFactor)
+	} else {
+		blockRewards = new(big.Int).SetUint64(0)
 	}
 
 	sumIn = new(big.Int).Mul(new(big.Int).SetUint64(sumInEbakus), precisionFactor)
