@@ -435,7 +435,7 @@ func (cli *DBClient) GetTransactionByHash(hash string) (*models.TransactionFull,
 	return &models.TransactionFull{Tx: &tx, Txr: &txr}, nil
 }
 
-func (cli *DBClient) GetAddressTotals(address string) (sumIn, sumOut, miningRewards *big.Int, countIn, countOut uint64, err error) {
+func (cli *DBClient) GetAddressTotals(address string) (sumIn, sumOut, blockRewards *big.Int, countIn, countOut uint64, err error) {
 
 	query := strings.Join([]string{"SELECT count(value), sum(value) FROM transactions WHERE addr_to = E'\\\\", address[1:], "'"}, "")
 
@@ -492,7 +492,7 @@ func (cli *DBClient) GetAddressTotals(address string) (sumIn, sumOut, miningRewa
 	if countMinedBlocks > 0 {
 		blockRewardUint64 := new(big.Int).Div(dpos.BlockReward, precisionFactor).Uint64() // convert from Wei
 		reward := new(big.Int).SetUint64(countMinedBlocks * blockRewardUint64)
-		miningRewards = new(big.Int).Mul(reward, precisionFactor)
+		blockRewards = new(big.Int).Mul(reward, precisionFactor)
 	}
 
 	sumIn = new(big.Int).Mul(new(big.Int).SetUint64(sumInEbakus), precisionFactor)
