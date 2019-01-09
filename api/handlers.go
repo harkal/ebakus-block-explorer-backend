@@ -228,14 +228,15 @@ func HandleAddress(w http.ResponseWriter, r *http.Request) {
 
 	log.Println("Request Address info for:", address)
 
-	sumIn, sumOut, countIn, countOut, err := dbc.GetAddressTotals(address)
+	sumIn, sumOut, blockRewards, countIn, countOut, err := dbc.GetAddressTotals(address)
 
 	result := map[string]interface{}{
-		"address":   address,
-		"total_in":  sumIn,
-		"total_out": sumOut,
-		"count_in":  countIn,
-		"count_out": countOut,
+		"address":       address,
+		"total_in":      sumIn,
+		"total_out":     sumOut,
+		"count_in":      countIn,
+		"count_out":     countOut,
+		"block_rewards": blockRewards,
 	}
 
 	res, err := json.Marshal(result)
