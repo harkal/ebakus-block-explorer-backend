@@ -105,6 +105,7 @@ const (
 	ADDRESS_TO
 	ADDRESS_ALL
 	ADDRESS_BLOCKHASH
+	LATEST
 )
 
 // MarshalJSON converts a Transaction to a byte array

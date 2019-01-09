@@ -67,6 +67,7 @@ func (ec explorerContext) startServer() cli.ActionFunc {
 
 		// Setup route handlers...
 		ec.router.HandleFunc("/block/{param}", api.HandleBlock).Methods("GET")
+		ec.router.HandleFunc("/transaction/{ref:(?:latest)}", api.HandleTxByAddress).Methods("GET")
 		ec.router.HandleFunc("/transaction/{hash}", api.HandleTxByHash).Methods("GET")
 		ec.router.HandleFunc("/transaction/{ref}/{address}", api.HandleTxByAddress).Methods("GET")
 
