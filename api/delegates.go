@@ -4,6 +4,7 @@ import (
 	"errors"
 
 	"bitbucket.org/pantelisss/ebakus_server/db"
+	"bitbucket.org/pantelisss/ebakus_server/models"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 )
@@ -62,22 +63,28 @@ func getDelegatesStats() (map[string]interface{}, error) {
 		return nil, err
 	}
 
+	// 2. get latest blocks from DB during the last `blockDensityLookBackTime` seconds
+	timestampOfEarlierBlock := float64(latestBlock.TimeStamp) - float64(blockDensityLookBackTime)
+	latestBlocks, err := dbc.GetBlocksByTimestamp(hexutil.Uint64(timestampOfEarlierBlock), models.TIMESTAMP_GREATER_EQUAL_THAN, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	latestBlocksMap := make(map[uint64]models.Block, len(latestBlocks))
+	for _, block := range latestBlocks {
+		latestBlocksMap[uint64(block.TimeStamp)] = block
+	}
+
 	totalMissedBlock := 0
 	delegatesMap := make(map[common.Address]DelegateInfo, len(latestBlock.Delegates))
 
-	// 2. loop back for `blockDensityLookBackTime` seconds to check for missed blocks by producers
+	// 3. loop back for `blockDensityLookBackTime` seconds to check for missed blocks by producers
 	for i := 0; i < blockDensityLookBackTime; i++ {
-		timestamp := float64(latestBlock.TimeStamp) - float64(i)
-		slot := timestamp / float64(DPOSConfigPeriod)
+		timestamp := uint64(latestBlock.TimeStamp) - uint64(i)
+		slot := float64(timestamp) / float64(DPOSConfigPeriod)
 
-		// 3. find the producer who had to produce the block at that time
+		// 4. find the producer who had to produce the block at that time
 		origProducer := getSignerAtSlot(latestBlock.Delegates, slot)
-
-		// 4. check if this producer produced the block
-		actualProducer, err := dbc.GetBlockProducerAtTimeStamp(hexutil.Uint64(timestamp))
-		if err != nil {
-			return nil, err
-		}
 
 		if _, exists := delegatesMap[origProducer]; !exists {
 			delegatesMap[origProducer] = DelegateInfo{
@@ -88,10 +95,16 @@ func getDelegatesStats() (map[string]interface{}, error) {
 		}
 
 		delegateInfo := delegatesMap[origProducer]
-
 		delegateInfo.TotalBlocks++
 
-		if *actualProducer != origProducer {
+		// 5. check if this producer produced the block
+		actualProducer := common.Address{}
+		block, blockFound := latestBlocksMap[timestamp]
+		if blockFound {
+			actualProducer = block.Producer
+		}
+
+		if !blockFound || actualProducer != origProducer {
 			delegateInfo.MissedBlocks++
 			totalMissedBlock++
 		}
@@ -99,7 +112,7 @@ func getDelegatesStats() (map[string]interface{}, error) {
 		delegatesMap[origProducer] = delegateInfo
 	}
 
-	// 5. calc density for delegates
+	// 6. calc density for delegates
 	for address, delegateInfo := range delegatesMap {
 		delegateInfo.Density = float64(1) - (float64(delegateInfo.MissedBlocks) / float64(delegateInfo.TotalBlocks))
 

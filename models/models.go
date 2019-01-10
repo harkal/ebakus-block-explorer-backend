@@ -109,6 +109,14 @@ const (
 	LATEST
 )
 
+type TimestampCondition int
+
+const (
+	TIMESTAMP_EQUAL TimestampCondition = iota
+	TIMESTAMP_SMALLER_EQUAL_THAN
+	TIMESTAMP_GREATER_EQUAL_THAN
+)
+
 // MarshalJSON converts a Transaction to a byte array
 // that contains it's data in JSON format.
 func (t Transaction) MarshalJSON() ([]byte, error) {

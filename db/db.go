@@ -316,24 +316,78 @@ func (cli *DBClient) GetBlockRange(fromNumber, rng uint32) ([]models.Block, erro
 	return result, nil
 }
 
-// GetLatestBlockDelegates returns the most recent block id (aka number)
-func (cli *DBClient) GetBlockProducerAtTimeStamp(timestamp hexutil.Uint64) (*common.Address, error) {
+// GetBlocksByTimestamp finds and returns the block info ordered by timestamp
+func (cli *DBClient) GetBlocksByTimestamp(timestamp hexutil.Uint64, timestampCondition models.TimestampCondition, producer *string) ([]models.Block, error) {
+	// Query for bytea value with the hex method, pass from char [1,end) since
+	// the required structure is E'\\xDEADBEEF'
+	// For more, check https://www.postgresql.org/docs/9.0/static/datatype-binary.html
+	query := "SELECT * FROM blocks"
 
-	rows, err := cli.db.Query("SELECT producer FROM blocks WHERE timestamp = $1", timestamp)
+	switch timestampCondition {
+	case models.TIMESTAMP_EQUAL:
+		query = strings.Join([]string{query, " WHERE timestamp = $1"}, "")
+	case models.TIMESTAMP_GREATER_EQUAL_THAN:
+		query = strings.Join([]string{query, " WHERE timestamp >= $1"}, "")
+	case models.TIMESTAMP_SMALLER_EQUAL_THAN:
+		query = strings.Join([]string{query, " WHERE timestamp <= $1"}, "")
+	}
+
+	if producer != nil {
+		producerAddress := *producer
+		query = strings.Join([]string{query, " AND producer = E'\\\\", producerAddress[1:], "'"}, "")
+	}
+
+	query = strings.Join([]string{query, " ORDER BY timestamp DESC"}, "")
+
+	rows, err := cli.db.Query(query, timestamp)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
 
-	var producer common.Address
+	var result []models.Block
 
-	rows.Next()
-	rows.Scan(&producer)
-	if err = rows.Err(); err != nil {
-		return nil, err
+	for rows.Next() {
+		var block models.Block
+		var hash, parentHash, transactionsRoot, receiptsRoot, delegatesRaw, producer []byte
+		rows.Scan(&block.Number,
+			&block.TimeStamp,
+			&hash,
+			&parentHash,
+			&transactionsRoot,
+			&receiptsRoot,
+			&block.Size,
+			&block.TransactionCount,
+			&block.GasUsed,
+			&block.GasLimit,
+			&delegatesRaw,
+			&producer,
+			&block.Signature)
+		if err = rows.Err(); err != nil {
+			return nil, err
+		}
+
+		block.Hash.SetBytes(hash)
+		block.ParentHash.SetBytes(parentHash)
+		block.TransactionsRoot.SetBytes(transactionsRoot)
+		block.ReceiptsRoot.SetBytes(receiptsRoot)
+
+		delegates := make([]common.Address, 0)
+		l := len(delegatesRaw)
+		delegateCount := l / 20
+		for i := 0; i < delegateCount; i++ {
+			var d common.Address
+			copy(d[:], delegatesRaw[20*i:20*i+20])
+			delegates = append(delegates, d)
+		}
+
+		block.Delegates = delegates
+		block.Producer.SetBytes(producer)
+
+		result = append(result, block)
 	}
 
-	return &producer, nil
+	return result, nil
 }
 
 // GetTransactionByHash finds and returns the transaction with the provided Hash
