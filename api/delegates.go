@@ -2,6 +2,7 @@ package webapi
 
 import (
 	"errors"
+	"sort"
 
 	"bitbucket.org/pantelisss/ebakus_server/db"
 	"bitbucket.org/pantelisss/ebakus_server/models"
@@ -10,7 +11,11 @@ import (
 )
 
 var (
-	blockDensityLookBackTime = 360 // seconds
+	// intervals to find block density by looking back in seconds from last block
+	blockDensityLookBackTimes = []int{
+		5 * 60,  // 5 minutes
+		60 * 60, // 1 hour
+	}
 )
 
 // DPOSConfig values on running node
@@ -27,9 +32,10 @@ var (
 )
 
 type DelegateInfo struct {
-	MissedBlocks uint64  `json:"missed_blocks"`
-	TotalBlocks  uint64  `json:"total_blocks"`
-	Density      float64 `json:"density"`
+	SecondsExamined uint64  `json:"seconds_examined"`
+	MissedBlocks    uint64  `json:"missed_blocks"`
+	TotalBlocks     uint64  `json:"total_blocks"`
+	Density         float64 `json:"density"`
 }
 
 func getSignerAtSlot(delegates []common.Address, slot float64) common.Address {
@@ -52,6 +58,10 @@ func getDelegatesStats(address string) (map[string]interface{}, error) {
 
 	isAddressLookup := common.IsHexAddress(address)
 	lookupAddress := common.HexToAddress(address)
+
+	// sort blockDensityLookBackTimes for our algorithm
+	sort.Ints(blockDensityLookBackTimes)
+	longestBlockDensityLookBackTime := blockDensityLookBackTimes[len(blockDensityLookBackTimes)-1]
 
 	dbc := db.GetClient()
 	if dbc == nil {
@@ -86,72 +96,94 @@ func getDelegatesStats(address string) (map[string]interface{}, error) {
 	}
 
 	// 2. get latest blocks from DB during the last `blockDensityLookBackTime` seconds
-	timestampOfEarlierBlock := float64(latestBlock.TimeStamp) - float64(blockDensityLookBackTime)
+	timestampOfEarlierBlock := float64(latestBlock.TimeStamp) - float64(longestBlockDensityLookBackTime)
 	latestBlocks, err := dbc.GetBlocksByTimestamp(hexutil.Uint64(timestampOfEarlierBlock), models.TIMESTAMP_GREATER_EQUAL_THAN, address)
 	if err != nil {
 		return nil, err
 	}
 
+	// create a map using `timestamp` as key for our algorithm lookup
 	latestBlocksMap := make(map[uint64]models.Block, len(latestBlocks))
 	for _, block := range latestBlocks {
 		latestBlocksMap[uint64(block.TimeStamp)] = block
 	}
 
-	totalMissedBlock := 0
-	delegatesMap := make(map[common.Address]DelegateInfo, len(latestBlock.Delegates))
+	// map to store the end results for our response
+	delegatesInfo := make(map[common.Address][]DelegateInfo, len(latestBlock.Delegates))
+
+	// temp map used during the runtime of our loop
+	delegatesRuntime := make(map[common.Address]DelegateInfo, len(latestBlock.Delegates))
+
+	totalMissedBlocks := 0
+	remainingLookBackPeriods := blockDensityLookBackTimes
 
 	// 3. loop back for `blockDensityLookBackTime` seconds to check for missed blocks by producers
-	for i := 0; i < blockDensityLookBackTime; i++ {
+	for i := 0; i < longestBlockDensityLookBackTime; i++ {
 		timestamp := uint64(latestBlock.TimeStamp) - uint64(i)
 		slot := float64(timestamp) / float64(DPOSConfigPeriod)
 
 		// 4. find the producer who had to produce the block at that time
 		origProducer := getSignerAtSlot(latestBlock.Delegates, slot)
 
-		// if request is for specific address then only count for it
-		if isAddressLookup && origProducer != lookupAddress {
-			continue
+		// handle when:
+		//   either we search for all delegates
+		//   or a specific address and it matches
+		if !isAddressLookup || (isAddressLookup && origProducer == lookupAddress) {
+
+			// init DelegateInfo for new delegates
+			if _, exists := delegatesRuntime[origProducer]; !exists {
+				delegatesRuntime[origProducer] = DelegateInfo{
+					SecondsExamined: 0,
+					MissedBlocks:    0,
+					TotalBlocks:     0,
+					Density:         0,
+				}
+			}
+
+			delegateInfo := delegatesRuntime[origProducer]
+			delegateInfo.TotalBlocks++
+
+			// 5. check if this producer produced the block
+			actualProducer := common.Address{}
+			block, blockFound := latestBlocksMap[timestamp]
+			if blockFound {
+				actualProducer = block.Producer
+			}
+
+			if !blockFound || actualProducer != origProducer {
+				delegateInfo.MissedBlocks++
+				totalMissedBlocks++
+			}
+
+			//  store delegateInfo in the temp runtime map
+			delegatesRuntime[origProducer] = delegateInfo
 		}
 
-		if _, exists := delegatesMap[origProducer]; !exists {
-			delegatesMap[origProducer] = DelegateInfo{
-				MissedBlocks: 0,
-				TotalBlocks:  0,
-				Density:      0,
+		// check if next lookBack period reached, in order to push delegate info into end result
+		if i+1 == remainingLookBackPeriods[0] {
+
+			// remove existing lookBack period from array and move to next one
+			remainingLookBackPeriods = remainingLookBackPeriods[1:]
+
+			// 6. store results for current period for all delegates
+			for curAddress, curDelegateInfo := range delegatesRuntime {
+				curDelegateInfo.SecondsExamined = uint64(i + 1)
+				curDelegateInfo.Density = float64(1) - (float64(curDelegateInfo.MissedBlocks) / float64(curDelegateInfo.TotalBlocks))
+
+				delegatesInfo[curAddress] = append(delegatesInfo[curAddress], curDelegateInfo)
 			}
 		}
-
-		delegateInfo := delegatesMap[origProducer]
-		delegateInfo.TotalBlocks++
-
-		// 5. check if this producer produced the block
-		actualProducer := common.Address{}
-		block, blockFound := latestBlocksMap[timestamp]
-		if blockFound {
-			actualProducer = block.Producer
-		}
-
-		if !blockFound || actualProducer != origProducer {
-			delegateInfo.MissedBlocks++
-			totalMissedBlock++
-		}
-
-		delegatesMap[origProducer] = delegateInfo
-	}
-
-	// 6. calc density for delegates
-	for address, delegateInfo := range delegatesMap {
-		delegateInfo.Density = float64(1) - (float64(delegateInfo.MissedBlocks) / float64(delegateInfo.TotalBlocks))
-
-		delegatesMap[address] = delegateInfo
 	}
 
 	result := map[string]interface{}{
-		// "address": address,
-		"total_blocks_examined": blockDensityLookBackTime,
-		"total_missed_blocks":   totalMissedBlock,
-		"delegates":             latestBlock.Delegates,
-		"delegates_info":        delegatesMap,
+		"total_seconds_examined": longestBlockDensityLookBackTime,
+		"total_missed_blocks":    totalMissedBlocks,
+		"delegates":              latestBlock.Delegates,
+		"delegates_info":         delegatesInfo,
+	}
+
+	if isAddressLookup {
+		result["address"] = address
 	}
 
 	return result, nil
