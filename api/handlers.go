@@ -365,7 +365,13 @@ func HandleStats(w http.ResponseWriter, r *http.Request) {
 	// if forAddress {
 	// 	log.Println("Request Stats for:", address)
 	// }
-	result := map[string]interface{}{}
+
+	result, err := getDelegatesStats()
+	if err != nil {
+		log.Printf("! Error: %s", err.Error())
+		http.Error(w, "error", http.StatusInternalServerError)
+		return
+	}
 
 	res, err := json.Marshal(result)
 

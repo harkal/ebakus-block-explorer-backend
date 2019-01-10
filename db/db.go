@@ -316,6 +316,26 @@ func (cli *DBClient) GetBlockRange(fromNumber, rng uint32) ([]models.Block, erro
 	return result, nil
 }
 
+// GetLatestBlockDelegates returns the most recent block id (aka number)
+func (cli *DBClient) GetBlockProducerAtTimeStamp(timestamp hexutil.Uint64) (*common.Address, error) {
+
+	rows, err := cli.db.Query("SELECT producer FROM blocks WHERE timestamp = $1", timestamp)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var producer common.Address
+
+	rows.Next()
+	rows.Scan(&producer)
+	if err = rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return &producer, nil
+}
+
 // GetTransactionByHash finds and returns the transaction with the provided Hash
 func (cli *DBClient) GetTransactionByHash(hash string) (*models.TransactionFull, error) {
 	// Query for bytea value with the hex method, pass from char [1,end) since
