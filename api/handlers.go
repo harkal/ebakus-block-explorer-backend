@@ -7,9 +7,8 @@ import (
 	"net/http"
 	"strconv"
 
-	"bitbucket.org/pantelisss/ebakus_server/models"
-
 	"bitbucket.org/pantelisss/ebakus_server/db"
+	"bitbucket.org/pantelisss/ebakus_server/models"
 
 	"github.com/gorilla/mux"
 )
@@ -344,6 +343,31 @@ func HandleTxByAddress(w http.ResponseWriter, r *http.Request) {
 	}
 
 	res, err := json.Marshal(txs)
+
+	if err != nil {
+		log.Printf("! Error: %s", err.Error())
+		http.Error(w, "error", http.StatusInternalServerError)
+	} else {
+		w.Write(res)
+	}
+}
+
+func HandleStats(w http.ResponseWriter, r *http.Request) {
+	if r.Method != "GET" {
+		http.Error(w, "error", http.StatusBadRequest)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+
+	// vars := mux.Vars(r)
+	// address, forAddress := vars["address"]
+	// if forAddress {
+	// 	log.Println("Request Stats for:", address)
+	// }
+	result := map[string]interface{}{}
+
+	res, err := json.Marshal(result)
 
 	if err != nil {
 		log.Printf("! Error: %s", err.Error())
