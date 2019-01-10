@@ -317,7 +317,7 @@ func (cli *DBClient) GetBlockRange(fromNumber, rng uint32) ([]models.Block, erro
 }
 
 // GetBlocksByTimestamp finds and returns the block info ordered by timestamp
-func (cli *DBClient) GetBlocksByTimestamp(timestamp hexutil.Uint64, timestampCondition models.TimestampCondition, producer *string) ([]models.Block, error) {
+func (cli *DBClient) GetBlocksByTimestamp(timestamp hexutil.Uint64, timestampCondition models.TimestampCondition, producer string) ([]models.Block, error) {
 	// Query for bytea value with the hex method, pass from char [1,end) since
 	// the required structure is E'\\xDEADBEEF'
 	// For more, check https://www.postgresql.org/docs/9.0/static/datatype-binary.html
@@ -332,9 +332,8 @@ func (cli *DBClient) GetBlocksByTimestamp(timestamp hexutil.Uint64, timestampCon
 		query = strings.Join([]string{query, " WHERE timestamp <= $1"}, "")
 	}
 
-	if producer != nil {
-		producerAddress := *producer
-		query = strings.Join([]string{query, " AND producer = E'\\\\", producerAddress[1:], "'"}, "")
+	if common.IsHexAddress(producer) {
+		query = strings.Join([]string{query, " AND producer = E'\\\\", producer[1:], "'"}, "")
 	}
 
 	query = strings.Join([]string{query, " ORDER BY timestamp DESC"}, "")

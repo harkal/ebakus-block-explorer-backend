@@ -360,16 +360,21 @@ func HandleStats(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 
-	// vars := mux.Vars(r)
-	// address, forAddress := vars["address"]
-	// if forAddress {
-	// 	log.Println("Request Stats for:", address)
-	// }
+	vars := mux.Vars(r)
+	address, ok := vars["address"]
+	if ok {
+		log.Println("Request Stats for:", address)
+	}
 
-	result, err := getDelegatesStats()
+	result, err := getDelegatesStats(address)
 	if err != nil {
 		log.Printf("! Error: %s", err.Error())
-		http.Error(w, "error", http.StatusInternalServerError)
+
+		if err == ErrAddressNotFoundInDelegates {
+			http.Error(w, "error", http.StatusNotFound)
+		} else {
+			http.Error(w, "error", http.StatusInternalServerError)
+		}
 		return
 	}
 

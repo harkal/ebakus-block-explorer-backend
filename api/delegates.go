@@ -22,6 +22,10 @@ var (
 	DPOSConfigDelegateEpoch  = 1
 )
 
+var (
+	ErrAddressNotFoundInDelegates = errors.New("Address not found in delegates")
+)
+
 type DelegateInfo struct {
 	MissedBlocks uint64  `json:"missed_blocks"`
 	TotalBlocks  uint64  `json:"total_blocks"`
@@ -44,7 +48,10 @@ func getSignerAtSlot(delegates []common.Address, slot float64) common.Address {
 	return common.Address{}
 }
 
-func getDelegatesStats() (map[string]interface{}, error) {
+func getDelegatesStats(address string) (map[string]interface{}, error) {
+
+	isAddressLookup := common.IsHexAddress(address)
+	lookupAddress := common.HexToAddress(address)
 
 	dbc := db.GetClient()
 	if dbc == nil {
@@ -63,9 +70,24 @@ func getDelegatesStats() (map[string]interface{}, error) {
 		return nil, err
 	}
 
+	// if lookupAddress not in delegates then skip
+	if isAddressLookup {
+		addressFound := false
+		for _, delegate := range latestBlock.Delegates {
+			addressFound = lookupAddress == delegate
+			if addressFound {
+				break
+			}
+		}
+
+		if !addressFound {
+			return nil, ErrAddressNotFoundInDelegates
+		}
+	}
+
 	// 2. get latest blocks from DB during the last `blockDensityLookBackTime` seconds
 	timestampOfEarlierBlock := float64(latestBlock.TimeStamp) - float64(blockDensityLookBackTime)
-	latestBlocks, err := dbc.GetBlocksByTimestamp(hexutil.Uint64(timestampOfEarlierBlock), models.TIMESTAMP_GREATER_EQUAL_THAN, nil)
+	latestBlocks, err := dbc.GetBlocksByTimestamp(hexutil.Uint64(timestampOfEarlierBlock), models.TIMESTAMP_GREATER_EQUAL_THAN, address)
 	if err != nil {
 		return nil, err
 	}
@@ -85,6 +107,11 @@ func getDelegatesStats() (map[string]interface{}, error) {
 
 		// 4. find the producer who had to produce the block at that time
 		origProducer := getSignerAtSlot(latestBlock.Delegates, slot)
+
+		// if request is for specific address then only count for it
+		if isAddressLookup && origProducer != lookupAddress {
+			continue
+		}
 
 		if _, exists := delegatesMap[origProducer]; !exists {
 			delegatesMap[origProducer] = DelegateInfo{
