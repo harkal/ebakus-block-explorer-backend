@@ -16,6 +16,7 @@ import (
 
 	"github.com/gorilla/mux"
 	"github.com/rs/cors"
+	"github.com/urfave/cli/altsrc"
 
 	cli "gopkg.in/urfave/cli.v1"
 )
@@ -35,9 +36,12 @@ func expandHome(path string) string {
 }
 
 func (ec explorerContext) initExplorer() cli.BeforeFunc {
-
 	// Part of the init that depends on cmd arguments
 	return func(c *cli.Context) error {
+		if err := altsrc.InitInputSourceWithContext(c.App.Flags, altsrc.NewYamlSourceFromFlagFunc("config"))(c); err != nil {
+			return err
+		}
+
 		var err error
 		err = db.InitFromCli(c)
 		if err != nil {
@@ -129,45 +133,49 @@ func main() {
 	app.Usage = "Web API Server for Ebakus"
 
 	app.Flags = []cli.Flag{
-		cli.StringFlag{
+		altsrc.NewStringFlag(cli.StringFlag{
 			Name:  "address",
 			Usage: "Network address to bind",
 			Value: "0.0.0.0",
-		},
-		cli.StringFlag{
+		}),
+		altsrc.NewIntFlag(cli.IntFlag{
 			Name:  "port",
 			Usage: "Port where the API is served",
-			Value: "8080",
-		},
-		cli.StringFlag{
+			Value: 8080,
+		}),
+		altsrc.NewStringFlag(cli.StringFlag{
 			Name:  "dbhost",
 			Usage: "PostgreSQL database hostname",
 			Value: "localhost",
-		},
-		cli.IntFlag{
+		}),
+		altsrc.NewIntFlag(cli.IntFlag{
 			Name:  "dbport",
 			Usage: "PostgreSQL database port",
 			Value: 5432,
-		},
-		cli.StringFlag{
+		}),
+		altsrc.NewStringFlag(cli.StringFlag{
 			Name:  "dbname",
 			Usage: "Database name",
 			Value: "ebakus",
-		},
-		cli.StringFlag{
+		}),
+		altsrc.NewStringFlag(cli.StringFlag{
 			Name:  "dbuser",
 			Usage: "Database username",
 			Value: "ebakus",
-		},
-		cli.StringFlag{
+		}),
+		altsrc.NewStringFlag(cli.StringFlag{
 			Name:  "dbpass",
 			Usage: "Database user password",
 			Value: "",
-		},
-		cli.StringFlag{
+		}),
+		altsrc.NewStringFlag(cli.StringFlag{
 			Name:  "ipc",
 			Usage: "The ebakus node to connect to e.g. ./ebakus/ebakus.ipc",
 			Value: "~/ebakus/ebakus.ipc",
+		}),
+		cli.StringFlag{
+			Name:  "config",
+			Value: "config.yaml",
 		},
 	}
 
