@@ -5,9 +5,12 @@ import (
 	"html/template"
 	"log"
 	"os"
+	"os/user"
+	"path/filepath"
 
 	api "bitbucket.org/pantelisss/ebakus_server/api"
 	"bitbucket.org/pantelisss/ebakus_server/db"
+	ipcModule "bitbucket.org/pantelisss/ebakus_server/ipc"
 
 	"net/http"
 
@@ -22,6 +25,15 @@ type explorerContext struct {
 	router *mux.Router
 }
 
+func expandHome(path string) string {
+	if len(path) >= 2 && path[:2] == "~/" {
+		usr, _ := user.Current()
+		dir := usr.HomeDir
+		path = filepath.Join(dir, path[2:])
+	}
+	return path
+}
+
 func (ec explorerContext) initExplorer() cli.BeforeFunc {
 
 	// Part of the init that depends on cmd arguments
@@ -32,6 +44,11 @@ func (ec explorerContext) initExplorer() cli.BeforeFunc {
 			return err
 		}
 		ec.db = db.GetClient()
+
+		ipcFile := expandHome(c.String("ipc"))
+		if _, err := ipcModule.NewIPCInterface(ipcFile); err != nil {
+			log.Fatal("Failed to connect to ebakus", err)
+		}
 
 		return nil
 	}
@@ -74,6 +91,9 @@ func (ec explorerContext) startServer() cli.ActionFunc {
 		ec.router.HandleFunc("/address/{address}", api.HandleAddress).Methods("GET")
 		ec.router.HandleFunc("/stats", api.HandleStats).Methods("GET")
 		ec.router.HandleFunc("/stats/{address}", api.HandleStats).Methods("GET")
+
+		ec.router.HandleFunc("/delegates", api.HandleDelegates).Methods("GET")
+		ec.router.HandleFunc("/delegates/{number}", api.HandleDelegates).Methods("GET")
 
 		handler := cors.Default().Handler(ec.router)
 		err = http.ListenAndServe(buff.String(), handler)
@@ -143,6 +163,11 @@ func main() {
 			Name:  "dbpass",
 			Usage: "Database user password",
 			Value: "",
+		},
+		cli.StringFlag{
+			Name:  "ipc",
+			Usage: "The ebakus node to connect to e.g. ./ebakus/ebakus.ipc",
+			Value: "~/ebakus/ebakus.ipc",
 		},
 	}
 

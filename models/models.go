@@ -221,3 +221,8 @@ func (tf TransactionFull) MarshalJSON() ([]byte, error) {
 
 	return json.Marshal(&enc)
 }
+
+type DelegateInfo struct {
+	Address common.Address `json:"address"`
+	Stake   uint64         `json:"stake"`
+}
