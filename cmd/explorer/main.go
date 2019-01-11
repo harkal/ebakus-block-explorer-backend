@@ -72,6 +72,8 @@ func (ec explorerContext) startServer() cli.ActionFunc {
 		ec.router.HandleFunc("/transaction/{ref}/{address}", api.HandleTxByAddress).Methods("GET")
 
 		ec.router.HandleFunc("/address/{address}", api.HandleAddress).Methods("GET")
+		ec.router.HandleFunc("/stats", api.HandleStats).Methods("GET")
+		ec.router.HandleFunc("/stats/{address}", api.HandleStats).Methods("GET")
 
 		handler := cors.Default().Handler(ec.router)
 		err = http.ListenAndServe(buff.String(), handler)
