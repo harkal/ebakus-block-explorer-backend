@@ -118,7 +118,7 @@ func getDelegatesStats(address string) (map[string]interface{}, error) {
 		latestBlocksMap[uint64(block.TimeStamp)] = block
 	}
 
-	// map to store the end results for our response
+	// map to store the end results
 	delegatesInfo := make(map[common.Address][]models.DelegateInfo, len(latestBlock.Delegates))
 
 	// temp map used during the runtime of our loop
@@ -143,6 +143,7 @@ func getDelegatesStats(address string) (map[string]interface{}, error) {
 			// init DelegateInfo for new delegates
 			if _, exists := delegatesRuntime[origProducer]; !exists {
 				delegatesRuntime[origProducer] = models.DelegateInfo{
+					Address:         origProducer,
 					SecondsExamined: 0,
 					MissedBlocks:    0,
 					TotalBlocks:     0,
@@ -192,11 +193,18 @@ func getDelegatesStats(address string) (map[string]interface{}, error) {
 		}
 	}
 
+	// parse delegates to array in order to maintain the ordering
+	delegatesResponse := make([][]models.DelegateInfo, 0, len(delegatesInfo))
+	for _, delegate := range latestBlock.Delegates {
+		if delegateInfo, ok := delegatesInfo[delegate]; ok {
+			delegatesResponse = append(delegatesResponse, delegateInfo)
+		}
+	}
+
 	result := map[string]interface{}{
 		"total_seconds_examined": longestBlockDensityLookBackTime,
 		"total_missed_blocks":    totalMissedBlocks,
-		"delegates":              latestBlock.Delegates,
-		"delegates_info":         delegatesInfo,
+		"delegates":              delegatesResponse,
 	}
 
 	if isAddressLookup {
