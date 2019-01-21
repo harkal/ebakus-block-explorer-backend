@@ -223,6 +223,14 @@ func (tf TransactionFull) MarshalJSON() ([]byte, error) {
 }
 
 type DelegateInfo struct {
+	SecondsExamined uint64  `json:"seconds_examined"`
+	MissedBlocks    uint64  `json:"missed_blocks"`
+	TotalBlocks     uint64  `json:"total_blocks"`
+	Density         float64 `json:"density"`
+	Stake           uint64  `json:"stake"`
+}
+
+type DelegateVoteInfo struct {
 	Address common.Address `json:"address"`
 	Stake   uint64         `json:"stake"`
 }

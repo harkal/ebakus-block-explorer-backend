@@ -5,6 +5,7 @@ import (
 	"sort"
 
 	"bitbucket.org/pantelisss/ebakus_server/db"
+	"bitbucket.org/pantelisss/ebakus_server/ipc"
 	"bitbucket.org/pantelisss/ebakus_server/models"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
@@ -31,15 +32,7 @@ var (
 	ErrAddressNotFoundInDelegates = errors.New("Address not found in delegates")
 )
 
-type DelegateInfo struct {
-	SecondsExamined uint64  `json:"seconds_examined"`
-	MissedBlocks    uint64  `json:"missed_blocks"`
-	TotalBlocks     uint64  `json:"total_blocks"`
-	Density         float64 `json:"density"`
-}
-
 func getSignerAtSlot(delegates []common.Address, slot float64) common.Address {
-
 	if DPOSConfigDelegateCount == 0 || DPOSConfigTurnBlockCount == 0 {
 		return common.Address{}
 	}
@@ -66,6 +59,11 @@ func getDelegatesStats(address string) (map[string]interface{}, error) {
 	dbc := db.GetClient()
 	if dbc == nil {
 		return nil, errors.New("Failed to open DB")
+	}
+
+	ipc := ipc.GetIPC()
+	if ipc == nil {
+		return nil, errors.New("Failed to find IPC connection")
 	}
 
 	// 1. get latest block
@@ -95,6 +93,18 @@ func getDelegatesStats(address string) (map[string]interface{}, error) {
 		}
 	}
 
+	// get delegate votes from node, only for last block
+	delegateVotes, err := ipc.GetDelegates(latestBlockNumber)
+	if err != nil {
+		return nil, err
+	}
+
+	// create a map using `address` as key for our algorithm lookup
+	delegateVotesMap := make(map[common.Address]uint64, len(delegateVotes))
+	for _, delegateVoteInfo := range delegateVotes {
+		delegateVotesMap[delegateVoteInfo.Address] = delegateVoteInfo.Stake
+	}
+
 	// 2. get latest blocks from DB during the last `blockDensityLookBackTime` seconds
 	timestampOfEarlierBlock := float64(latestBlock.TimeStamp) - float64(longestBlockDensityLookBackTime)
 	latestBlocks, err := dbc.GetBlocksByTimestamp(hexutil.Uint64(timestampOfEarlierBlock), models.TIMESTAMP_GREATER_EQUAL_THAN, address)
@@ -109,10 +119,10 @@ func getDelegatesStats(address string) (map[string]interface{}, error) {
 	}
 
 	// map to store the end results for our response
-	delegatesInfo := make(map[common.Address][]DelegateInfo, len(latestBlock.Delegates))
+	delegatesInfo := make(map[common.Address][]models.DelegateInfo, len(latestBlock.Delegates))
 
 	// temp map used during the runtime of our loop
-	delegatesRuntime := make(map[common.Address]DelegateInfo, len(latestBlock.Delegates))
+	delegatesRuntime := make(map[common.Address]models.DelegateInfo, len(latestBlock.Delegates))
 
 	totalMissedBlocks := 0
 	remainingLookBackPeriods := blockDensityLookBackTimes
@@ -132,7 +142,7 @@ func getDelegatesStats(address string) (map[string]interface{}, error) {
 
 			// init DelegateInfo for new delegates
 			if _, exists := delegatesRuntime[origProducer]; !exists {
-				delegatesRuntime[origProducer] = DelegateInfo{
+				delegatesRuntime[origProducer] = models.DelegateInfo{
 					SecondsExamined: 0,
 					MissedBlocks:    0,
 					TotalBlocks:     0,
@@ -165,11 +175,18 @@ func getDelegatesStats(address string) (map[string]interface{}, error) {
 			// remove existing lookBack period from array and move to next one
 			remainingLookBackPeriods = remainingLookBackPeriods[1:]
 
-			// 6. store results for current period for all delegates
+			// 6. handle data for current period for all delegates
 			for curAddress, curDelegateInfo := range delegatesRuntime {
 				curDelegateInfo.SecondsExamined = uint64(i + 1)
 				curDelegateInfo.Density = float64(1) - (float64(curDelegateInfo.MissedBlocks) / float64(curDelegateInfo.TotalBlocks))
 
+				// hack: we inject stake into all periods for now, it's not correct
+				// as we have stake for latest block only and not for the actual block
+				if stake, ok := delegateVotesMap[curAddress]; ok {
+					curDelegateInfo.Stake = stake
+				}
+
+				// 7. store results for current period for all delegates
 				delegatesInfo[curAddress] = append(delegatesInfo[curAddress], curDelegateInfo)
 			}
 		}

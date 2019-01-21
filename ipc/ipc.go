@@ -171,8 +171,8 @@ func (ipc *IPCInterface) GetTransactionByHash(hash *common.Hash) (*models.Transa
 	return &tx, &txr, nil
 }
 
-func (ipc *IPCInterface) GetDelegates(number uint64) ([]models.DelegateInfo, error) {
-	var di []models.DelegateInfo
+func (ipc *IPCInterface) GetDelegates(number uint64) ([]models.DelegateVoteInfo, error) {
+	var di []models.DelegateVoteInfo
 
 	err := ipc.cli.Call(&di, "dpos_getDelegates", hexutil.EncodeUint64(number))
 	if err != nil {
