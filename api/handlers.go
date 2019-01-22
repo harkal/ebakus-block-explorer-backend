@@ -8,6 +8,7 @@ import (
 	"strconv"
 
 	"bitbucket.org/pantelisss/ebakus_server/db"
+	"bitbucket.org/pantelisss/ebakus_server/ipc"
 	"bitbucket.org/pantelisss/ebakus_server/models"
 
 	"github.com/gorilla/mux"
@@ -379,6 +380,75 @@ func HandleStats(w http.ResponseWriter, r *http.Request) {
 	}
 
 	res, err := json.Marshal(result)
+
+	if err != nil {
+		log.Printf("! Error: %s", err.Error())
+		http.Error(w, "error", http.StatusInternalServerError)
+	} else {
+		w.Write(res)
+	}
+}
+
+// HandleDelegates returns the delegates for block
+func HandleDelegates(w http.ResponseWriter, r *http.Request) {
+	if r.Method != "GET" {
+		http.Error(w, "error", http.StatusBadRequest)
+		return
+	}
+
+	dbc := db.GetClient()
+	if dbc == nil {
+		log.Printf("! Error: DBClient is not initialized!")
+		http.Error(w, "error", http.StatusInternalServerError)
+		return
+	}
+
+	ipc := ipc.GetIPC()
+	if ipc == nil {
+		log.Printf("! Error: IPCInterface is not initialized!")
+		http.Error(w, "error", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+
+	vars := mux.Vars(r)
+
+	var blockNumber uint64
+	rawId, err := strconv.ParseInt(vars["number"], 10, 64)
+	if err == nil {
+		// Block number requested
+		blockNumber = uint64(rawId)
+
+		log.Println("Request Delegates for block number:", blockNumber)
+
+		if blockNumber < 0 {
+			log.Printf("! Error: Bad negative id")
+			http.Error(w, "error", http.StatusBadRequest)
+			return
+		}
+
+	} else {
+		// Latest block requested
+		log.Println("Request Delegates for latest block")
+
+		var err error
+		blockNumber, err = dbc.GetLatestBlockNumber()
+		if err != nil {
+			log.Printf("! Error: %s", err.Error())
+			http.Error(w, "error", http.StatusInternalServerError)
+			return
+		}
+	}
+
+	delegates, err := ipc.GetDelegates(blockNumber)
+	if err != nil {
+		log.Printf("! Error: %s", err.Error())
+		http.Error(w, "error", http.StatusInternalServerError)
+		return
+	}
+
+	res, err := json.Marshal(delegates)
 
 	if err != nil {
 		log.Printf("! Error: %s", err.Error())

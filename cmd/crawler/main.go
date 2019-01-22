@@ -204,7 +204,7 @@ func main() {
 		},
 	}
 	app.Copyright = "(c) 2018 Ebakus Team"
-	app.Usage = "Run in various modes depending on funcion mode"
+	app.Usage = "Run in various modes depending on function mode"
 
 	genericFlags := []cli.Flag{
 		altsrc.NewStringFlag(cli.StringFlag{

@@ -29,13 +29,25 @@ type IPCInterface struct {
 	cli *rpc.Client
 }
 
+var ipci *IPCInterface
+
 func NewIPCInterface(endpoint string) (*IPCInterface, error) {
 	cli, err := rpc.Dial(endpoint)
 	if err != nil {
 		return nil, err
 	}
 
-	return &IPCInterface{cli}, nil
+	ipci = &IPCInterface{cli}
+
+	return ipci, nil
+}
+
+// GetIPC returns the current ipc instance.
+// Dev Commentary: I'm sorry for this but I needed a way to have
+// the IPC available throughout the project. If you know
+// a better way to do this I'd like to know it too.
+func GetIPC() *IPCInterface {
+	return ipci
 }
 
 //
@@ -157,4 +169,15 @@ func (ipc *IPCInterface) GetTransactionByHash(hash *common.Hash) (*models.Transa
 	}
 
 	return &tx, &txr, nil
+}
+
+func (ipc *IPCInterface) GetDelegates(number uint64) ([]models.DelegateVoteInfo, error) {
+	var di []models.DelegateVoteInfo
+
+	err := ipc.cli.Call(&di, "dpos_getDelegates", hexutil.EncodeUint64(number))
+	if err != nil {
+		return nil, err
+	}
+
+	return di, nil
 }
