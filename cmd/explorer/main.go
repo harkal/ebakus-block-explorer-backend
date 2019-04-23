@@ -99,6 +99,8 @@ func (ec explorerContext) startServer() cli.ActionFunc {
 		ec.router.HandleFunc("/delegates", api.HandleDelegates).Methods("GET")
 		ec.router.HandleFunc("/delegates/{number}", api.HandleDelegates).Methods("GET")
 
+		ec.router.HandleFunc("/abi/{address}", api.HandleABI).Methods("GET")
+
 		handler := cors.Default().Handler(ec.router)
 		err = http.ListenAndServe(buff.String(), handler)
 

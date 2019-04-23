@@ -181,3 +181,14 @@ func (ipc *IPCInterface) GetDelegates(number uint64) ([]models.DelegateVoteInfo,
 
 	return di, nil
 }
+
+func (ipc *IPCInterface) GetABIForContract(address common.Address) (string, error) {
+	var abi string
+
+	err := ipc.cli.Call(&abi, "eth_getABIForContract", address)
+	if err != nil {
+		return "", err
+	}
+
+	return abi, nil
+}
