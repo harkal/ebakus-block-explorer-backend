@@ -15,6 +15,8 @@ CREATE TABLE blocks (
 );
 
 CREATE INDEX blockhash_idx ON blocks USING btree (hash);
+CREATE INDEX producer_idx ON blocks USING btree (producer);
+CREATE INDEX timestamp_idx ON blocks USING btree (timestamp);
 
 CREATE TABLE transactions (
   hash bytea PRIMARY KEY,
