@@ -11,6 +11,7 @@ import (
 	"bitbucket.org/pantelisss/ebakus_server/ipc"
 	"bitbucket.org/pantelisss/ebakus_server/models"
 
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/gorilla/mux"
 )
 
@@ -353,6 +354,7 @@ func HandleTxByAddress(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// HandleStats returns stats for producers
 func HandleStats(w http.ResponseWriter, r *http.Request) {
 	if r.Method != "GET" {
 		http.Error(w, "error", http.StatusBadRequest)
@@ -455,5 +457,55 @@ func HandleDelegates(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "error", http.StatusInternalServerError)
 	} else {
 		w.Write(res)
+	}
+}
+
+// HandleABI returns the ABI for a contract
+func HandleABI(w http.ResponseWriter, r *http.Request) {
+	if r.Method != "GET" {
+		http.Error(w, "error", http.StatusBadRequest)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+
+	vars := mux.Vars(r)
+	address, ok := vars["address"]
+	if !ok {
+		log.Println("Request ABI for:", address)
+		http.Error(w, "error", http.StatusBadRequest)
+		return
+	}
+
+	ipc := ipc.GetIPC()
+	if ipc == nil {
+		log.Printf("! Error: IPC connection is not initialized!")
+		http.Error(w, "error", http.StatusInternalServerError)
+		return
+	}
+
+	contractAddress := common.HexToAddress(address)
+
+	abi, err := ipc.GetABIForContract(contractAddress)
+	if err != nil {
+		log.Printf("! Error: %s", err.Error())
+		http.Error(w, "error", http.StatusInternalServerError)
+		return
+	}
+
+	var res []map[string]interface{}
+	if err := json.Unmarshal([]byte(abi), &res); err != nil {
+		log.Printf("! Error: %s", err.Error())
+		http.Error(w, "error", http.StatusInternalServerError)
+		return
+	}
+
+	out, err := json.Marshal(res)
+
+	if err != nil {
+		log.Printf("! Error: %s", err.Error())
+		http.Error(w, "error", http.StatusInternalServerError)
+	} else {
+		w.Write(out)
 	}
 }
