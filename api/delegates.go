@@ -24,7 +24,7 @@ var (
 var (
 	DPOSConfigPeriod         = 1
 	DPOSConfigTurnBlockCount = 6
-	DPOSConfigDelegateCount  = 2
+	DPOSConfigDelegateCount  = 3
 	DPOSConfigDelegateEpoch  = 1
 )
 
