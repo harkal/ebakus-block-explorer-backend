@@ -11,6 +11,7 @@ import (
 	"text/template"
 
 	"bitbucket.org/pantelisss/ebakus_server/models"
+	"bitbucket.org/pantelisss/ebakus_server/redis"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
@@ -674,6 +675,14 @@ func (cli *DBClient) InsertTransactions(transactions []models.TransactionFull) e
 		if err != nil {
 			log.Println("Error on Transaction", tx.BlockNumber, err.Error())
 		}
+
+		if err := redis.Delete("address:" + tx.To.Hex()); err != nil {
+			log.Println("Failed to clear redis cache for ", "address:"+tx.To.Hex(), err.Error())
+		}
+
+		if err := redis.Delete("address:" + tx.From.Hex()); err != nil {
+			log.Println("Failed to clear redis cache for ", "address:"+tx.From.Hex(), err.Error())
+		}
 	}
 
 	_, err = stmt.Exec()
@@ -747,6 +756,10 @@ func (cli *DBClient) InsertBlocks(blocks []*models.Block) error {
 
 		if err != nil {
 			log.Println(err.Error())
+		}
+
+		if err := redis.Delete("address:" + bl.Producer.Hex()); err != nil {
+			log.Println("Failed to clear redis cache for ", "address:"+bl.Producer.Hex(), err.Error())
 		}
 	}
 
