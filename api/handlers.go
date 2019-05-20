@@ -10,6 +10,7 @@ import (
 	"bitbucket.org/pantelisss/ebakus_server/db"
 	"bitbucket.org/pantelisss/ebakus_server/ipc"
 	"bitbucket.org/pantelisss/ebakus_server/models"
+	"bitbucket.org/pantelisss/ebakus_server/redis"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/gorilla/mux"
@@ -219,15 +220,23 @@ func HandleAddress(w http.ResponseWriter, r *http.Request) {
 
 	vars := mux.Vars(r)
 
-	address, ok := vars["address"]
-
+	addressString, ok := vars["address"]
 	if !ok {
 		log.Printf("! Error: %s", errors.New("Parameter is n"))
 		http.Error(w, "error", http.StatusBadRequest)
 		return
 	}
 
-	log.Println("Request Address info for:", address)
+	address := common.HexToAddress(addressString)
+
+	log.Println("Request Address info for:", address.Hex())
+
+	if ok, _ := redis.Exists("address:" + address.Hex()); ok {
+		if res, err := redis.Get("address:" + address.Hex()); err == nil {
+			w.Write(res)
+			return
+		}
+	}
 
 	sumIn, sumOut, blockRewards, countIn, countOut, err := dbc.GetAddressTotals(address)
 
@@ -246,6 +255,9 @@ func HandleAddress(w http.ResponseWriter, r *http.Request) {
 		log.Printf("! Error: %s", err.Error())
 		http.Error(w, "error", http.StatusInternalServerError)
 	} else {
+
+		redis.Set("address:"+address.Hex(), res)
+
 		w.Write(res)
 	}
 }
