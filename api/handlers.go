@@ -216,32 +216,44 @@ func HandleAddress(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	ipc := ipc.GetIPC()
+	if ipc == nil {
+		log.Printf("! Error: IPCInterface is not initialized!")
+		http.Error(w, "error", http.StatusInternalServerError)
+		return
+	}
+
 	w.Header().Set("Content-Type", "application/json")
 
 	vars := mux.Vars(r)
 
-	addressString, ok := vars["address"]
-	if !ok {
+	addressHex, ok := vars["address"]
+	if !ok || !common.IsHexAddress(addressHex) {
 		log.Printf("! Error: %s", errors.New("Parameter is n"))
 		http.Error(w, "error", http.StatusBadRequest)
 		return
 	}
 
-	address := common.HexToAddress(addressString)
+	// correct case sensivity for redis
+	address := common.HexToAddress(addressHex)
+	addressHex = address.Hex()
+	redisKey := "address:" + addressHex
 
-	log.Println("Request Address info for:", address.Hex())
+	log.Println("Request Address info for:", addressHex)
 
-	if ok, _ := redis.Exists("address:" + address.Hex()); ok {
-		if res, err := redis.Get("address:" + address.Hex()); err == nil {
+	if ok, _ := redis.Exists(redisKey); ok {
+		if res, err := redis.Get(redisKey); err == nil {
 			w.Write(res)
 			return
 		}
 	}
 
-	sumIn, sumOut, blockRewards, countIn, countOut, err := dbc.GetAddressTotals(address)
+	sumIn, sumOut, blockRewards, countIn, countOut, err := dbc.GetAddressTotals(addressHex)
+	balance, err := ipc.GetAddressBalance(address)
 
 	result := models.AddressResult{
 		Address:      address,
+		Balance:      balance,
 		TotalIn:      sumIn,
 		TotalOut:     sumOut,
 		CountIn:      countIn,
@@ -256,7 +268,7 @@ func HandleAddress(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "error", http.StatusInternalServerError)
 	} else {
 
-		redis.Set("address:"+address.Hex(), res)
+		redis.Set(redisKey, res)
 
 		w.Write(res)
 	}
