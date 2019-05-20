@@ -231,13 +231,13 @@ func HandleAddress(w http.ResponseWriter, r *http.Request) {
 
 	sumIn, sumOut, blockRewards, countIn, countOut, err := dbc.GetAddressTotals(address)
 
-	result := map[string]interface{}{
-		"address":       address,
-		"total_in":      sumIn,
-		"total_out":     sumOut,
-		"count_in":      countIn,
-		"count_out":     countOut,
-		"block_rewards": blockRewards,
+	result := models.AddressResult{
+		Address:      address,
+		TotalIn:      sumIn,
+		TotalOut:     sumOut,
+		CountIn:      countIn,
+		CountOut:     countOut,
+		BlockRewards: blockRewards,
 	}
 
 	res, err := json.Marshal(result)
