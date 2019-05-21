@@ -530,13 +530,21 @@ func HandleABI(w http.ResponseWriter, r *http.Request) {
 
 	vars := mux.Vars(r)
 	address, ok := vars["address"]
-	if !ok {
+	if !ok || !common.IsHexAddress(address) {
 		log.Println("Request ABI for:", address)
 		http.Error(w, "error", http.StatusBadRequest)
 		return
 	}
 
 	contractAddress := common.HexToAddress(address)
+	redisKey := "abi:" + contractAddress.Hex()
+
+	if ok, _ := redis.Exists(redisKey); ok {
+		if res, err := redis.Get(redisKey); err == nil {
+			w.Write(res)
+			return
+		}
+	}
 
 	abi, err := ipc.GetABIForContract(contractAddress)
 	if err != nil {
@@ -558,6 +566,8 @@ func HandleABI(w http.ResponseWriter, r *http.Request) {
 		log.Printf("! Error: %s", err.Error())
 		http.Error(w, "error", http.StatusInternalServerError)
 	} else {
+		redis.Set(redisKey, out)
+		redis.Expire(redisKey, 60*60*24) // 1 day
 		w.Write(out)
 	}
 }
