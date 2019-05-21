@@ -33,3 +33,14 @@ func Get(key string) ([]byte, error) {
 func Delete(key string) error {
 	return Pool.Do(radix.Cmd(nil, "DEL", key))
 }
+
+func Expire(key string, seconds uint64) error {
+	var res uint64
+	if err := Pool.Do(radix.FlatCmd(&res, "EXPIRE", key, seconds)); err != nil {
+		return fmt.Errorf("error setting expire for key %s: %v", key, err)
+	}
+	if res != 1 {
+		return fmt.Errorf("couldn't find the key %s for setting expire", key)
+	}
+	return nil
+}

@@ -393,6 +393,19 @@ func HandleStats(w http.ResponseWriter, r *http.Request) {
 		log.Println("Request Stats for:", address)
 	}
 
+	// correct case sensivity for redis
+	redisKey := "stats"
+	if common.IsHexAddress(address) {
+		redisKey += ":" + common.HexToAddress(address).Hex()
+	}
+
+	if ok, _ := redis.Exists(redisKey); ok {
+		if res, err := redis.Get(redisKey); err == nil {
+			w.Write(res)
+			return
+		}
+	}
+
 	result, err := getDelegatesStats(address)
 	if err != nil {
 		log.Printf("! Error: %s", err.Error())
@@ -411,6 +424,8 @@ func HandleStats(w http.ResponseWriter, r *http.Request) {
 		log.Printf("! Error: %s", err.Error())
 		http.Error(w, "error", http.StatusInternalServerError)
 	} else {
+		redis.Set(redisKey, res)
+		redis.Expire(redisKey, 1)
 		w.Write(res)
 	}
 }
