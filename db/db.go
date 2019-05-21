@@ -676,8 +676,10 @@ func (cli *DBClient) InsertTransactions(transactions []models.TransactionFull) e
 			log.Println("Error on Transaction", tx.BlockNumber, err.Error())
 		}
 
-		if err := redis.Delete("address:" + tx.To.Hex()); err != nil {
-			log.Println("Failed to clear redis cache for ", "address:"+tx.To.Hex(), err.Error())
+		if tx.To != nil {
+			if err := redis.Delete("address:" + tx.To.Hex()); err != nil {
+				log.Println("Failed to clear redis cache for ", "address:"+tx.To.Hex(), err.Error())
+			}
 		}
 
 		if err := redis.Delete("address:" + tx.From.Hex()); err != nil {

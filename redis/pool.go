@@ -27,18 +27,13 @@ func InitFromCli(c *cli.Context) error {
 // Init creates a Redis Pool.
 func Init(host string, port, poolSize int) (err error) {
 	addr := fmt.Sprintf("%s:%d", host, port)
-	if Pool, err = radix.NewPool("tcp", addr, poolSize); err != nil {
-		return err
-	}
-	cleanupHook()
-	return
+	Pool, err = radix.NewPool("tcp", addr, poolSize)
+	return err
 }
 
-func cleanupHook() {
+func CleanupHook() {
 	c := make(chan os.Signal, 1)
-	signal.Notify(c, os.Interrupt)
-	signal.Notify(c, syscall.SIGTERM)
-	signal.Notify(c, syscall.SIGKILL)
+	signal.Notify(c, os.Interrupt, syscall.SIGTERM, syscall.SIGKILL)
 	go func() {
 		<-c
 		Pool.Close()

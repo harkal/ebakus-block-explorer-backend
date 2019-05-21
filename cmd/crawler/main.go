@@ -147,6 +147,7 @@ func pullNewBlocks(c *cli.Context) error {
 	if err := redis.InitFromCli(c); err != nil {
 		log.Fatal("Failed to connect to redis", err)
 	}
+	defer redis.Pool.Close()
 
 	last, err := ipc.GetBlockNumber()
 	if err != nil {

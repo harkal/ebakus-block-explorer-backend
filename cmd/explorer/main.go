@@ -58,6 +58,7 @@ func (ec explorerContext) initExplorer() cli.BeforeFunc {
 		if err := redis.InitFromCli(c); err != nil {
 			log.Fatal("Failed to connect to redis", err)
 		}
+		redis.CleanupHook()
 
 		return nil
 	}
