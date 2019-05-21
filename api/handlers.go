@@ -268,9 +268,7 @@ func HandleAddress(w http.ResponseWriter, r *http.Request) {
 		log.Printf("! Error: %s", err.Error())
 		http.Error(w, "error", http.StatusInternalServerError)
 	} else {
-
 		redis.Set(redisKey, res)
-
 		w.Write(res)
 	}
 }
@@ -521,6 +519,13 @@ func HandleABI(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	ipc := ipc.GetIPC()
+	if ipc == nil {
+		log.Printf("! Error: IPC connection is not initialized!")
+		http.Error(w, "error", http.StatusInternalServerError)
+		return
+	}
+
 	w.Header().Set("Content-Type", "application/json")
 
 	vars := mux.Vars(r)
@@ -528,13 +533,6 @@ func HandleABI(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		log.Println("Request ABI for:", address)
 		http.Error(w, "error", http.StatusBadRequest)
-		return
-	}
-
-	ipc := ipc.GetIPC()
-	if ipc == nil {
-		log.Printf("! Error: IPC connection is not initialized!")
-		http.Error(w, "error", http.StatusInternalServerError)
 		return
 	}
 
