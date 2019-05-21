@@ -3,6 +3,7 @@ package webapi
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"log"
 	"net/http"
 	"strconv"
@@ -455,6 +456,9 @@ func HandleDelegates(w http.ResponseWriter, r *http.Request) {
 
 	vars := mux.Vars(r)
 
+	redisKey := "delegates"
+	redisExpiryTime := uint64(1)
+
 	var blockNumber uint64
 	rawId, err := strconv.ParseInt(vars["number"], 10, 64)
 	if err == nil {
@@ -469,6 +473,8 @@ func HandleDelegates(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
+		redisKey = fmt.Sprintf("%s:%d", redisKey, blockNumber)
+		redisExpiryTime = 60 * 60 * 24 // 1 day
 	} else {
 		// Latest block requested
 		log.Println("Request Delegates for latest block")
@@ -478,6 +484,13 @@ func HandleDelegates(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			log.Printf("! Error: %s", err.Error())
 			http.Error(w, "error", http.StatusInternalServerError)
+			return
+		}
+	}
+
+	if ok, _ := redis.Exists(redisKey); ok {
+		if res, err := redis.Get(redisKey); err == nil {
+			w.Write(res)
 			return
 		}
 	}
@@ -495,6 +508,8 @@ func HandleDelegates(w http.ResponseWriter, r *http.Request) {
 		log.Printf("! Error: %s", err.Error())
 		http.Error(w, "error", http.StatusInternalServerError)
 	} else {
+		redis.Set(redisKey, res)
+		redis.Expire(redisKey, redisExpiryTime)
 		w.Write(res)
 	}
 }
