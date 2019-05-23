@@ -3,6 +3,7 @@ package webapi
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"log"
 	"net/http"
 	"strconv"
@@ -10,6 +11,7 @@ import (
 	"bitbucket.org/pantelisss/ebakus_server/db"
 	"bitbucket.org/pantelisss/ebakus_server/ipc"
 	"bitbucket.org/pantelisss/ebakus_server/models"
+	"bitbucket.org/pantelisss/ebakus_server/redis"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/gorilla/mux"
@@ -215,29 +217,46 @@ func HandleAddress(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	ipc := ipc.GetIPC()
+	if ipc == nil {
+		log.Printf("! Error: IPCInterface is not initialized!")
+		http.Error(w, "error", http.StatusInternalServerError)
+		return
+	}
+
 	w.Header().Set("Content-Type", "application/json")
 
 	vars := mux.Vars(r)
 
-	address, ok := vars["address"]
-
-	if !ok {
+	addressHex, ok := vars["address"]
+	if !ok || !common.IsHexAddress(addressHex) {
 		log.Printf("! Error: %s", errors.New("Parameter is n"))
 		http.Error(w, "error", http.StatusBadRequest)
 		return
 	}
 
-	log.Println("Request Address info for:", address)
+	// correct case sensivity for redis
+	address := common.HexToAddress(addressHex)
+	addressHex = address.Hex()
+	redisKey := "address:" + addressHex
 
-	sumIn, sumOut, blockRewards, countIn, countOut, err := dbc.GetAddressTotals(address)
+	log.Println("Request Address info for:", addressHex)
 
-	result := map[string]interface{}{
-		"address":       address,
-		"total_in":      sumIn,
-		"total_out":     sumOut,
-		"count_in":      countIn,
-		"count_out":     countOut,
-		"block_rewards": blockRewards,
+	if ok, _ := redis.Exists(redisKey); ok {
+		if res, err := redis.Get(redisKey); err == nil {
+			w.Write(res)
+			return
+		}
+	}
+
+	blockRewards, txCount, err := dbc.GetAddressTotals(addressHex)
+	balance, err := ipc.GetAddressBalance(address)
+
+	result := models.AddressResult{
+		Address:      address,
+		Balance:      balance,
+		TxCount:      txCount,
+		BlockRewards: blockRewards,
 	}
 
 	res, err := json.Marshal(result)
@@ -246,6 +265,7 @@ func HandleAddress(w http.ResponseWriter, r *http.Request) {
 		log.Printf("! Error: %s", err.Error())
 		http.Error(w, "error", http.StatusInternalServerError)
 	} else {
+		redis.Set(redisKey, res)
 		w.Write(res)
 	}
 }
@@ -369,6 +389,19 @@ func HandleStats(w http.ResponseWriter, r *http.Request) {
 		log.Println("Request Stats for:", address)
 	}
 
+	// correct case sensivity for redis
+	redisKey := "stats"
+	if common.IsHexAddress(address) {
+		redisKey += ":" + common.HexToAddress(address).Hex()
+	}
+
+	if ok, _ := redis.Exists(redisKey); ok {
+		if res, err := redis.Get(redisKey); err == nil {
+			w.Write(res)
+			return
+		}
+	}
+
 	result, err := getDelegatesStats(address)
 	if err != nil {
 		log.Printf("! Error: %s", err.Error())
@@ -387,6 +420,8 @@ func HandleStats(w http.ResponseWriter, r *http.Request) {
 		log.Printf("! Error: %s", err.Error())
 		http.Error(w, "error", http.StatusInternalServerError)
 	} else {
+		redis.Set(redisKey, res)
+		redis.Expire(redisKey, 1)
 		w.Write(res)
 	}
 }
@@ -416,6 +451,9 @@ func HandleDelegates(w http.ResponseWriter, r *http.Request) {
 
 	vars := mux.Vars(r)
 
+	redisKey := "delegates"
+	redisExpiryTime := uint64(1)
+
 	var blockNumber uint64
 	rawId, err := strconv.ParseInt(vars["number"], 10, 64)
 	if err == nil {
@@ -430,6 +468,8 @@ func HandleDelegates(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
+		redisKey = fmt.Sprintf("%s:%d", redisKey, blockNumber)
+		redisExpiryTime = 60 * 60 * 24 // 1 day
 	} else {
 		// Latest block requested
 		log.Println("Request Delegates for latest block")
@@ -439,6 +479,13 @@ func HandleDelegates(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			log.Printf("! Error: %s", err.Error())
 			http.Error(w, "error", http.StatusInternalServerError)
+			return
+		}
+	}
+
+	if ok, _ := redis.Exists(redisKey); ok {
+		if res, err := redis.Get(redisKey); err == nil {
+			w.Write(res)
 			return
 		}
 	}
@@ -456,6 +503,8 @@ func HandleDelegates(w http.ResponseWriter, r *http.Request) {
 		log.Printf("! Error: %s", err.Error())
 		http.Error(w, "error", http.StatusInternalServerError)
 	} else {
+		redis.Set(redisKey, res)
+		redis.Expire(redisKey, redisExpiryTime)
 		w.Write(res)
 	}
 }
@@ -467,16 +516,6 @@ func HandleABI(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-
-	vars := mux.Vars(r)
-	address, ok := vars["address"]
-	if !ok {
-		log.Println("Request ABI for:", address)
-		http.Error(w, "error", http.StatusBadRequest)
-		return
-	}
-
 	ipc := ipc.GetIPC()
 	if ipc == nil {
 		log.Printf("! Error: IPC connection is not initialized!")
@@ -484,7 +523,25 @@ func HandleABI(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	w.Header().Set("Content-Type", "application/json")
+
+	vars := mux.Vars(r)
+	address, ok := vars["address"]
+	if !ok || !common.IsHexAddress(address) {
+		log.Println("Request ABI for:", address)
+		http.Error(w, "error", http.StatusBadRequest)
+		return
+	}
+
 	contractAddress := common.HexToAddress(address)
+	redisKey := "abi:" + contractAddress.Hex()
+
+	if ok, _ := redis.Exists(redisKey); ok {
+		if res, err := redis.Get(redisKey); err == nil {
+			w.Write(res)
+			return
+		}
+	}
 
 	abi, err := ipc.GetABIForContract(contractAddress)
 	if err != nil {
@@ -506,6 +563,8 @@ func HandleABI(w http.ResponseWriter, r *http.Request) {
 		log.Printf("! Error: %s", err.Error())
 		http.Error(w, "error", http.StatusInternalServerError)
 	} else {
+		redis.Set(redisKey, out)
+		redis.Expire(redisKey, 60*60*24) // 1 day
 		w.Write(out)
 	}
 }

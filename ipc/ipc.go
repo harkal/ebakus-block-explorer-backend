@@ -3,6 +3,7 @@ package ipc
 import (
 	"errors"
 	"log"
+	"math/big"
 	"sync"
 	"sync/atomic"
 
@@ -180,6 +181,17 @@ func (ipc *IPCInterface) GetDelegates(number uint64) ([]models.DelegateVoteInfo,
 	}
 
 	return di, nil
+}
+
+func (ipc *IPCInterface) GetAddressBalance(address common.Address) (*big.Int, error) {
+	var balance hexutil.Big
+
+	err := ipc.cli.Call(&balance, "eth_getBalance", address, "latest")
+	if err != nil {
+		return nil, err
+	}
+
+	return (*big.Int)(&balance), nil
 }
 
 func (ipc *IPCInterface) GetABIForContract(address common.Address) (string, error) {

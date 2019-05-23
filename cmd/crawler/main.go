@@ -14,6 +14,7 @@ import (
 	"bitbucket.org/pantelisss/ebakus_server/db"
 	ipcModule "bitbucket.org/pantelisss/ebakus_server/ipc"
 	"bitbucket.org/pantelisss/ebakus_server/models"
+	"bitbucket.org/pantelisss/ebakus_server/redis"
 
 	"github.com/nightlyone/lockfile"
 
@@ -143,6 +144,11 @@ func pullNewBlocks(c *cli.Context) error {
 	}
 	db := db.GetClient()
 
+	if err := redis.InitFromCli(c); err != nil {
+		log.Fatal("Failed to connect to redis", err)
+	}
+	defer redis.Pool.Close()
+
 	last, err := ipc.GetBlockNumber()
 	if err != nil {
 		log.Fatal("Failed to get last block number")
@@ -235,6 +241,18 @@ func main() {
 		altsrc.NewIntFlag(cli.IntFlag{
 			Name:  "threads",
 			Value: 8,
+		}),
+		altsrc.NewStringFlag(cli.StringFlag{
+			Name:  "redishost",
+			Value: "localhost",
+		}),
+		altsrc.NewIntFlag(cli.IntFlag{
+			Name:  "redisport",
+			Value: 6379,
+		}),
+		altsrc.NewIntFlag(cli.IntFlag{
+			Name:  "redispoolsize",
+			Value: 10,
 		}),
 		cli.StringFlag{
 			Name:  "config",

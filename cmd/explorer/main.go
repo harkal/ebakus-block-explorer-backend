@@ -11,6 +11,7 @@ import (
 	api "bitbucket.org/pantelisss/ebakus_server/api"
 	"bitbucket.org/pantelisss/ebakus_server/db"
 	ipcModule "bitbucket.org/pantelisss/ebakus_server/ipc"
+	"bitbucket.org/pantelisss/ebakus_server/redis"
 
 	"net/http"
 
@@ -53,6 +54,11 @@ func (ec explorerContext) initExplorer() cli.BeforeFunc {
 		if _, err := ipcModule.NewIPCInterface(ipcFile); err != nil {
 			log.Fatal("Failed to connect to ebakus", err)
 		}
+
+		if err := redis.InitFromCli(c); err != nil {
+			log.Fatal("Failed to connect to redis", err)
+		}
+		redis.CleanupHook()
 
 		return nil
 	}
@@ -174,6 +180,18 @@ func main() {
 			Name:  "ipc",
 			Usage: "The ebakus node to connect to e.g. ./ebakus/ebakus.ipc",
 			Value: "~/ebakus/ebakus.ipc",
+		}),
+		altsrc.NewStringFlag(cli.StringFlag{
+			Name:  "redishost",
+			Value: "localhost",
+		}),
+		altsrc.NewIntFlag(cli.IntFlag{
+			Name:  "redisport",
+			Value: 6379,
+		}),
+		altsrc.NewIntFlag(cli.IntFlag{
+			Name:  "redispoolsize",
+			Value: 10,
 		}),
 		cli.StringFlag{
 			Name:  "config",
