@@ -249,16 +249,13 @@ func HandleAddress(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	sumIn, sumOut, blockRewards, countIn, countOut, err := dbc.GetAddressTotals(addressHex)
+	blockRewards, txCount, err := dbc.GetAddressTotals(addressHex)
 	balance, err := ipc.GetAddressBalance(address)
 
 	result := models.AddressResult{
 		Address:      address,
 		Balance:      balance,
-		TotalIn:      sumIn,
-		TotalOut:     sumOut,
-		CountIn:      countIn,
-		CountOut:     countOut,
+		TxCount:      txCount,
 		BlockRewards: blockRewards,
 	}
 

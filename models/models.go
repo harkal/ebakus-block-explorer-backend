@@ -225,10 +225,7 @@ func (tf TransactionFull) MarshalJSON() ([]byte, error) {
 type AddressResult struct {
 	Address      common.Address `json:"address"`
 	Balance      *big.Int       `json:"balance"`
-	TotalIn      *big.Int       `json:"total_in"`
-	TotalOut     *big.Int       `json:"total_out"`
-	CountIn      uint64         `json:"count_in"`
-	CountOut     uint64         `json:"count_out"`
+	TxCount      uint64         `json:"tx_count"`
 	BlockRewards *big.Int       `json:"block_rewards"`
 }
 

@@ -448,40 +448,21 @@ func (cli *DBClient) GetTransactionByHash(hash string) (*models.TransactionFull,
 	return &models.TransactionFull{Tx: &tx, Txr: &txr}, nil
 }
 
-func (cli *DBClient) GetAddressTotals(address string) (sumIn, sumOut, blockRewards *big.Int, countIn, countOut uint64, err error) {
+func (cli *DBClient) GetAddressTotals(address string) (blockRewards *big.Int, txCount uint64, err error) {
 
-	query := strings.Join([]string{"SELECT count(value), sum(value) FROM transactions WHERE addr_to = E'\\\\", address[1:], "'"}, "")
+	query := strings.Join([]string{"SELECT count(value) FROM transactions WHERE addr_from = E'\\\\", address[1:], "' OR addr_to = E'\\\\", address[1:], "'"}, "")
 
 	rows, err := cli.db.Query(query)
 
 	if err != nil {
-		return bigIntZero, bigIntZero, bigIntZero, 0, 0, err
+		return bigIntZero, 0, err
 	}
 	defer rows.Close()
 
-	var sumInEbakus uint64
-
 	rows.Next()
-	rows.Scan(&countIn, &sumInEbakus)
+	rows.Scan(&txCount)
 	if err = rows.Err(); err != nil {
-		return bigIntZero, bigIntZero, bigIntZero, 0, 0, err
-	}
-
-	query = strings.Join([]string{"SELECT count(value), sum(value) FROM transactions WHERE addr_from = E'\\\\", address[1:], "'"}, "")
-
-	rows, err = cli.db.Query(query)
-
-	if err != nil {
-		return bigIntZero, bigIntZero, bigIntZero, 0, 0, err
-	}
-	defer rows.Close()
-
-	var sumOutEbakus uint64
-
-	rows.Next()
-	rows.Scan(&countOut, &sumOutEbakus)
-	if err = rows.Err(); err != nil {
-		return bigIntZero, bigIntZero, bigIntZero, 0, 0, err
+		return bigIntZero, 0, err
 	}
 
 	query = strings.Join([]string{"SELECT count(number) FROM blocks WHERE producer = E'\\\\", address[1:], "'"}, "")
@@ -489,7 +470,7 @@ func (cli *DBClient) GetAddressTotals(address string) (sumIn, sumOut, blockRewar
 	rows, err = cli.db.Query(query)
 
 	if err != nil {
-		return bigIntZero, bigIntZero, bigIntZero, 0, 0, err
+		return bigIntZero, 0, err
 	}
 	defer rows.Close()
 
@@ -498,7 +479,7 @@ func (cli *DBClient) GetAddressTotals(address string) (sumIn, sumOut, blockRewar
 	rows.Next()
 	rows.Scan(&countMinedBlocks)
 	if err = rows.Err(); err != nil {
-		return bigIntZero, bigIntZero, bigIntZero, 0, 0, err
+		return bigIntZero, 0, err
 	}
 
 	// Accumulate the rewards for the miner, if any
@@ -509,9 +490,6 @@ func (cli *DBClient) GetAddressTotals(address string) (sumIn, sumOut, blockRewar
 	} else {
 		blockRewards = new(big.Int).SetUint64(0)
 	}
-
-	sumIn = new(big.Int).Mul(new(big.Int).SetUint64(sumInEbakus), precisionFactor)
-	sumOut = new(big.Int).Mul(new(big.Int).SetUint64(sumOutEbakus), precisionFactor)
 
 	return
 }
