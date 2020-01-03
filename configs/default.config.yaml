@@ -1,5 +1,7 @@
 ipc: ~/ebakus/ebakus.ipc
 
+# port: 8080
+
 dbhost: localhost
 dbname: ebakus
 dbuser: postgres
@@ -9,5 +11,6 @@ dbport: 5432
 # redishost: localhost
 redisport: 6379
 redispoolsize: 10
+redisdbselect: 0
 
 threads: 8

@@ -20,14 +20,23 @@ func InitFromCli(c *cli.Context) error {
 	host := c.String("redishost")
 	port := c.Int("redisport")
 	poolSize := c.Int("redispoolsize")
-
-	return Init(host, port, poolSize)
+	dbSelect := c.Int("redisdbselect")
+	return Init(host, port, poolSize, dbSelect)
 }
 
 // Init creates a Redis Pool.
-func Init(host string, port, poolSize int) (err error) {
+func Init(host string, port, poolSize int, dbSelect int) (err error) {
+	connFunc := func(network, addr string) (radix.Conn, error) {
+		options := []radix.DialOpt{
+			radix.DialSelectDB(dbSelect),
+		}
+		return radix.Dial(network, addr,
+			options...,
+		)
+	}
+
 	addr := fmt.Sprintf("%s:%d", host, port)
-	Pool, err = radix.NewPool("tcp", addr, poolSize)
+	Pool, err = radix.NewPool("tcp", addr, poolSize, radix.PoolConnFunc(connFunc))
 	return err
 }
 

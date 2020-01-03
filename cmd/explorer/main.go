@@ -193,6 +193,10 @@ func main() {
 			Name:  "redispoolsize",
 			Value: 10,
 		}),
+		altsrc.NewIntFlag(cli.IntFlag{
+			Name:  "redisdbselect",
+			Value: 0,
+		}),
 		cli.StringFlag{
 			Name:  "config",
 			Value: "config.yaml",
