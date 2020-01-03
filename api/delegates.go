@@ -9,6 +9,7 @@ import (
 	"bitbucket.org/pantelisss/ebakus_server/models"
 	"github.com/ebakus/go-ebakus/common"
 	"github.com/ebakus/go-ebakus/common/hexutil"
+	"github.com/ebakus/go-ebakus/params"
 )
 
 var (
@@ -19,25 +20,19 @@ var (
 	}
 )
 
-// DPOSConfig values on running node
-// TODO: get those dynamically
-var (
-	DPOSConfigPeriod         = 1
-	DPOSConfigTurnBlockCount = 6
-	DPOSConfigDelegateCount  = 3
-)
-
 var (
 	ErrAddressNotFoundInDelegates = errors.New("Address not found in delegates")
 )
 
 func getSignerAtSlot(delegates []common.Address, slot float64) common.Address {
-	if DPOSConfigDelegateCount == 0 || DPOSConfigTurnBlockCount == 0 {
+	dposConfig := params.MainnetDPOSConfig
+
+	if dposConfig.DelegateCount == 0 || dposConfig.TurnBlockCount == 0 {
 		return common.Address{}
 	}
 
-	slot = slot / float64(DPOSConfigTurnBlockCount)
-	s := int(slot) % int(DPOSConfigDelegateCount)
+	slot = slot / float64(dposConfig.TurnBlockCount)
+	s := int(slot) % int(dposConfig.DelegateCount)
 
 	if s < len(delegates) {
 		return delegates[s]
@@ -47,6 +42,7 @@ func getSignerAtSlot(delegates []common.Address, slot float64) common.Address {
 }
 
 func getDelegatesStats(address string) (map[string]interface{}, error) {
+	dposConfig := params.MainnetDPOSConfig
 
 	isAddressLookup := common.IsHexAddress(address)
 	lookupAddress := common.HexToAddress(address)
@@ -129,7 +125,7 @@ func getDelegatesStats(address string) (map[string]interface{}, error) {
 	// 3. loop back for `blockDensityLookBackTime` seconds to check for missed blocks by producers
 	for i := 0; i < longestBlockDensityLookBackTime; i++ {
 		timestamp := uint64(latestBlock.TimeStamp) - uint64(i)
-		slot := float64(timestamp) / float64(DPOSConfigPeriod)
+		slot := float64(timestamp) / float64(dposConfig.Period)
 
 		// 4. find the producer who had to produce the block at that time
 		origProducer := getSignerAtSlot(latestBlock.Delegates, slot)
