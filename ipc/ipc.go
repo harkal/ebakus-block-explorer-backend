@@ -10,10 +10,10 @@ import (
 	"bitbucket.org/pantelisss/ebakus_server/db"
 	"bitbucket.org/pantelisss/ebakus_server/models"
 
-	"github.com/ethereum/go-ethereum/common"
+	"github.com/ebakus/go-ebakus/common"
 
-	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/ethereum/go-ethereum/rpc"
+	"github.com/ebakus/go-ebakus/common/hexutil"
+	"github.com/ebakus/go-ebakus/rpc"
 )
 
 var (

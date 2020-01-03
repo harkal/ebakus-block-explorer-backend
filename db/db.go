@@ -13,9 +13,8 @@ import (
 	"bitbucket.org/pantelisss/ebakus_server/models"
 	"bitbucket.org/pantelisss/ebakus_server/redis"
 
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/ethereum/go-ethereum/consensus/dpos"
+	"github.com/ebakus/go-ebakus/common"
+	"github.com/ebakus/go-ebakus/common/hexutil"
 	"github.com/lib/pq"
 	cli "gopkg.in/urfave/cli.v1"
 )

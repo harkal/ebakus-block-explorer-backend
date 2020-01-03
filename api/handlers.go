@@ -13,7 +13,7 @@ import (
 	"bitbucket.org/pantelisss/ebakus_server/models"
 	"bitbucket.org/pantelisss/ebakus_server/redis"
 
-	"github.com/ethereum/go-ethereum/common"
+	"github.com/ebakus/go-ebakus/common"
 	"github.com/gorilla/mux"
 )
 

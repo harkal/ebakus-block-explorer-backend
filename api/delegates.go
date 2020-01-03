@@ -7,8 +7,8 @@ import (
 	"bitbucket.org/pantelisss/ebakus_server/db"
 	"bitbucket.org/pantelisss/ebakus_server/ipc"
 	"bitbucket.org/pantelisss/ebakus_server/models"
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/ebakus/go-ebakus/common"
+	"github.com/ebakus/go-ebakus/common/hexutil"
 )
 
 var (

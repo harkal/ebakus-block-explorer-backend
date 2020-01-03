@@ -5,8 +5,8 @@ import (
 	"encoding/json"
 	"math/big"
 
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/ebakus/go-ebakus/common"
+	"github.com/ebakus/go-ebakus/common/hexutil"
 )
 
 //go:generate gencodec -type Block -field-override blockMarshaling -out gen_block_json.go
