@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"math"
 	"math/big"
 	"strings"
 	"text/template"
@@ -15,6 +16,7 @@ import (
 
 	"github.com/ebakus/go-ebakus/common"
 	"github.com/ebakus/go-ebakus/common/hexutil"
+	"github.com/ebakus/go-ebakus/params"
 	"github.com/lib/pq"
 	cli "gopkg.in/urfave/cli.v1"
 )
@@ -483,9 +485,14 @@ func (cli *DBClient) GetAddressTotals(address string) (blockRewards *big.Int, tx
 
 	// Accumulate the rewards for the miner, if any
 	if countMinedBlocks > 0 {
-		blockRewardUint64 := new(big.Int).Div(dpos.BlockReward, precisionFactor).Uint64() // convert from Wei
-		reward := new(big.Int).SetUint64(countMinedBlocks * blockRewardUint64)
-		blockRewards = new(big.Int).Mul(reward, precisionFactor)
+		// FIXME: set the correct algorithm from go-ebakus
+		dposConfig := params.MainnetDPOSConfig
+		blockReward := new(big.Float).SetFloat64(float64(dposConfig.InitialDistribution) * dposConfig.YearlyInflation / 365 / 24 / 60 / 60)
+		rewards := new(big.Float).Mul(new(big.Float).SetUint64(countMinedBlocks), blockReward)
+
+		rewards = new(big.Float).Mul(rewards, big.NewFloat(math.Pow10(18)))
+		blockRewards = new(big.Int)
+		rewards.Int(blockRewards)
 	} else {
 		blockRewards = new(big.Int).SetUint64(0)
 	}
