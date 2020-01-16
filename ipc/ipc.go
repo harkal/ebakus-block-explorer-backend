@@ -194,6 +194,17 @@ func (ipc *IPCInterface) GetAddressBalance(address common.Address) (*big.Int, er
 	return (*big.Int)(&balance), nil
 }
 
+func (ipc *IPCInterface) GetAddressStaked(address common.Address) (uint64, error) {
+	var staked uint64
+
+	err := ipc.cli.Call(&staked, "eth_getStaked", address, "latest")
+	if err != nil {
+		return 0, err
+	}
+
+	return staked, nil
+}
+
 func (ipc *IPCInterface) GetABIForContract(address common.Address) (string, error) {
 	var abi string
 
