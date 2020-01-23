@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"math/big"
 	"net/http"
 	"strconv"
 
@@ -14,7 +15,14 @@ import (
 	"bitbucket.org/pantelisss/ebakus_server/redis"
 
 	"github.com/ebakus/go-ebakus/common"
+	"github.com/ebakus/go-ebakus/params"
 	"github.com/gorilla/mux"
+)
+
+var (
+	valueDecimalPoints = int64(4)
+	precisionFactor    = new(big.Int).Exp(big.NewInt(10), big.NewInt(18-valueDecimalPoints), nil)
+	ether              = new(big.Int).Exp(big.NewInt(10), big.NewInt(18), nil)
 )
 
 // HandleBlockByID finds and returns block data by id
@@ -567,6 +575,72 @@ func HandleABI(w http.ResponseWriter, r *http.Request) {
 	} else {
 		redis.Set(redisKey, out)
 		redis.Expire(redisKey, 60*60*24) // 1 day
+		w.Write(out)
+	}
+}
+
+// HandleChainInfo returns useful info for this chain
+func HandleChainInfo(w http.ResponseWriter, r *http.Request) {
+	if r.Method != "GET" {
+		http.Error(w, "error", http.StatusBadRequest)
+		return
+	}
+
+	dbc := db.GetClient()
+	if dbc == nil {
+		log.Printf("! Error: DBClient is not initialized!")
+		http.Error(w, "error", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+
+	redisKey := "chainInfo"
+
+	if ok, _ := redis.Exists(redisKey); ok {
+		if res, err := redis.Get(redisKey); err == nil {
+			w.Write(res)
+			return
+		}
+	}
+
+	res := make(map[string]interface{})
+
+	var err error
+	latestBlockNumber, err := dbc.GetLatestBlockNumber()
+	if err != nil {
+		log.Printf("! Error: %s", err.Error())
+		http.Error(w, "error", http.StatusInternalServerError)
+		return
+	}
+
+	latestBlock, err := dbc.GetBlockByID(latestBlockNumber)
+	if err != nil {
+		log.Printf("! Error: %s", err.Error())
+		http.Error(w, "error", http.StatusInternalServerError)
+		return
+	}
+
+	res["block_number"] = latestBlockNumber
+	res["block_timestamp"] = uint64(latestBlock.TimeStamp)
+	res["block_hash"] = latestBlock.Hash.Hex()
+
+	dposConfig := params.MainnetDPOSConfig
+	blockRewards := 3171 * latestBlockNumber
+	totalSupply := dposConfig.InitialDistribution + blockRewards
+	totalSupplyWei := new(big.Int).Mul(new(big.Int).SetUint64(totalSupply), ether)
+
+	res["total_supply"] = totalSupplyWei
+	res["circulating_supply"] = totalSupplyWei
+
+	out, err := json.Marshal(res)
+
+	if err != nil {
+		log.Printf("! Error: %s", err.Error())
+		http.Error(w, "error", http.StatusInternalServerError)
+	} else {
+		redis.Set(redisKey, out)
+		redis.Expire(redisKey, 1) // 1 second
 		w.Write(out)
 	}
 }

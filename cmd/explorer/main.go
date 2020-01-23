@@ -107,6 +107,8 @@ func (ec explorerContext) startServer() cli.ActionFunc {
 
 		ec.router.HandleFunc("/abi/{address}", api.HandleABI).Methods("GET")
 
+		ec.router.HandleFunc("/chain-info", api.HandleChainInfo).Methods("GET")
+
 		handler := cors.Default().Handler(ec.router)
 		err = http.ListenAndServe(buff.String(), handler)
 
