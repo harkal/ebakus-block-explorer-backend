@@ -120,7 +120,7 @@ func streamInsertTransactions(wg *sync.WaitGroup, db *db.DBClient, txsCh <-chan 
 }
 
 func pullNewBlocks(c *cli.Context) error {
-	lock, err := lockfile.New(filepath.Join(os.TempDir(), "ebakuscrawler.lock"))
+	lock, err := lockfile.New(filepath.Join(os.TempDir(), "ebakus-crawler-"+c.String("dbname")+".lock"))
 	if err != nil {
 		fmt.Printf("Cannot init lock. reason: %v", err)
 		return err
