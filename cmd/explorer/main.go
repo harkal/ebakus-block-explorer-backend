@@ -138,6 +138,10 @@ func main() {
 			Name:  "George Koutsikos",
 			Email: "ragecryx@gmail.com",
 		},
+		cli.Author{
+			Name:  "Chris Ziogas",
+			Email: "ziogaschr@gmail.com",
+		},
 	}
 	app.Copyright = "(c) 2018 Ebakus Team"
 	app.Usage = "Web API Server for Ebakus"
