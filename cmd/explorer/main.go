@@ -17,9 +17,9 @@ import (
 
 	"github.com/gorilla/mux"
 	"github.com/rs/cors"
-	"github.com/urfave/cli/altsrc"
 
-	cli "gopkg.in/urfave/cli.v1"
+	"github.com/urfave/cli"
+	"github.com/urfave/cli/altsrc"
 )
 
 type explorerContext struct {

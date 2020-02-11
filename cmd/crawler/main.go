@@ -18,8 +18,8 @@ import (
 
 	"github.com/nightlyone/lockfile"
 
+	"github.com/urfave/cli"
 	"github.com/urfave/cli/altsrc"
-	cli "gopkg.in/urfave/cli.v1"
 )
 
 func getBlock(c *cli.Context) error {

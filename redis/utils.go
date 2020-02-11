@@ -3,7 +3,7 @@ package redis
 import (
 	"fmt"
 
-	"github.com/mediocregopher/radix"
+	"github.com/mediocregopher/radix/v3"
 )
 
 func Set(key string, value []byte) error {

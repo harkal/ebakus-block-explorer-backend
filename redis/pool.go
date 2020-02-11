@@ -6,8 +6,8 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/mediocregopher/radix"
-	cli "gopkg.in/urfave/cli.v1"
+	"github.com/mediocregopher/radix/v3"
+	"github.com/urfave/cli"
 )
 
 var (
