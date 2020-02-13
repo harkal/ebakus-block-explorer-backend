@@ -276,6 +276,7 @@ func HandleAddress(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "error", http.StatusInternalServerError)
 	} else {
 		redis.Set(redisKey, res)
+		redis.Expire(redisKey, 1) // 1 second
 		w.Write(res)
 	}
 }
