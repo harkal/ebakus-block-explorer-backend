@@ -449,8 +449,7 @@ func (cli *DBClient) GetTransactionByHash(hash string) (*models.TransactionFull,
 
 func (cli *DBClient) GetAddressTotals(address string) (blockRewards *big.Int, txCount uint64, err error) {
 
-	query := strings.Join([]string{"SELECT count(value) FROM transactions WHERE addr_from = E'\\\\", address[1:], "' OR addr_to = E'\\\\", address[1:], "'"}, "")
-
+	query := strings.Join([]string{"SELECT count(*) FROM transactions WHERE addr_from = E'\\\\", address[1:], "' OR addr_to = E'\\\\", address[1:], "'"}, "")
 	rows, err := cli.db.Query(query)
 
 	if err != nil {
@@ -464,7 +463,7 @@ func (cli *DBClient) GetAddressTotals(address string) (blockRewards *big.Int, tx
 		return bigIntZero, 0, err
 	}
 
-	query = strings.Join([]string{"SELECT count(number) FROM blocks WHERE producer = E'\\\\", address[1:], "'"}, "")
+	query = strings.Join([]string{"SELECT count(*) FROM blocks WHERE producer = E'\\\\", address[1:], "'"}, "")
 
 	rows, err = cli.db.Query(query)
 
