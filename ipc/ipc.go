@@ -129,7 +129,7 @@ func (ipc *IPCInterface) StreamTransactions(wg *sync.WaitGroup, db *db.DBClient,
 func (ipc *IPCInterface) StreamBlocks(wg *sync.WaitGroup, db *db.DBClient, bCh chan<- *models.Block, tCh chan<- TransactionWithTimestamp, dCh chan<- *models.Block, lastBlockNumber uint64) error {
 	defer wg.Done()
 
-	for i := lastBlockNumber; i > 0; i-- {
+	for i := lastBlockNumber; i >= 0; {
 		bl, err := ipc.GetBlock(i)
 		if err != nil {
 			return err
@@ -156,6 +156,11 @@ func (ipc *IPCInterface) StreamBlocks(wg *sync.WaitGroup, db *db.DBClient, bCh c
 		} else {
 			break
 		}
+
+		if i == 0 {
+			break
+		}
+		i--
 	}
 
 	close(dCh)
