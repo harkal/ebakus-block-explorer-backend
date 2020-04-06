@@ -7,8 +7,8 @@ while :; do
     shift
 done
 
-# while [ true ]; do
-#   sleep 1
+while [ true ]; do
+  sleep 1
 
   # check if a local ebakus instance is running, and connect to it
   ipc_arg=""
@@ -23,4 +23,4 @@ done
   fi
 
   $GOPATH/bin/ebakus_crawler checkforks --config $GOPATH/src/bitbucket.org/pantelisss/ebakus_server/configs/default.config.yaml $ipc_arg
-# done
+done
