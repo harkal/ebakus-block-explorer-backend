@@ -128,15 +128,15 @@ func streamDeleteBlockWithTransactions(wg *sync.WaitGroup, db *db.DBClient, dCh 
 
 		if err != nil {
 			log.Println("Error streamDeleteBlockWithTransactions", err.Error())
-
+			continue
 			// TODO: exit here?
 
-		} else {
-			bCh <- bl
+		}
 
-			for _, tx := range bl.Transactions {
-				tCh <- ipc.TransactionWithTimestamp{Hash: tx, Timestamp: bl.TimeStamp}
-			}
+		bCh <- bl
+
+		for _, tx := range bl.Transactions {
+			tCh <- ipc.TransactionWithTimestamp{Hash: tx, Timestamp: bl.TimeStamp}
 		}
 	}
 
@@ -179,83 +179,7 @@ func pullNewBlocks(c *cli.Context) error {
 		log.Fatal("Failed to get last block number")
 	}
 
-	first, err := db.GetLatestBlockNumber()
-	if err != nil {
-		return err
-	}
-
-	first++
-	log.Printf("Going to insert blocks %d to %d (%d)", first, last, last-first+1)
-
-	stime := time.Now()
-
-	blockCh := make(chan *models.Block, 512)
-	txsHashCh := make(chan ipcModule.TransactionWithTimestamp, 512)
-	txsCh := make(chan models.TransactionFull, 512)
-
-	var wg sync.WaitGroup
-
-	workerThreads := c.Int("threads")
-	ops := int64(workerThreads)
-	for i := 0; i < workerThreads; i++ {
-		wg.Add(1)
-		go ipc.StreamBlocks(&wg, blockCh, txsHashCh, &ops, first, last, workerThreads, i)
-	}
-
-	wg.Add(3)
-	go ipc.StreamTransactions(&wg, db, txsCh, txsHashCh)
-	go streamInsertTransactions(&wg, db, txsCh)
-
-	var count int
-	go func() {
-		defer wg.Done()
-		count, _ = streamInsertBlocks(db, blockCh)
-	}()
-
-	wg.Wait()
-
-	elapsed := time.Now().Sub(stime)
-	log.Printf("Processed %d blocks in %.3f (%.0f bps)", count, elapsed.Seconds(), float64(count)/elapsed.Seconds())
-
-	return err
-}
-
-func checkForks(c *cli.Context) error {
-	lock, err := lockfile.New(filepath.Join(os.TempDir(), "ebakus-check-fork-"+c.String("dbname")+".lock"))
-	if err != nil {
-		fmt.Printf("Cannot init lock. reason: %v", err)
-		return err
-	}
-	err = lock.TryLock()
-	if err != nil {
-		fmt.Printf("Cannot lock %q, reason: %v", lock, err)
-		return err
-	}
-	defer lock.Unlock()
-
-	ipcFile := expandHome(c.String("ipc"))
-	ipc, err := ipcModule.NewIPCInterface(ipcFile)
-	if err != nil {
-		log.Fatal("Failed to connect to ebakus", err)
-	}
-
-	err = db.InitFromCli(c)
-	if err != nil {
-		log.Fatal("Failed to load db client")
-	}
-	db := db.GetClient()
-
-	if err := redis.InitFromCli(c); err != nil {
-		log.Fatal("Failed to connect to redis", err)
-	}
-	defer redis.Pool.Close()
-
-	lastKnownBlockNumber, err := db.GetLatestBlockNumber()
-	if err != nil {
-		return err
-	}
-
-	log.Printf("Will start checking for forks from block number %d", lastKnownBlockNumber)
+	log.Printf("Going to insert blocks backwards from %d", last)
 
 	stime := time.Now()
 
@@ -267,7 +191,7 @@ func checkForks(c *cli.Context) error {
 	var wg sync.WaitGroup
 
 	wg.Add(5)
-	go ipc.ExamineBlocksForFork(&wg, db, lastKnownBlockNumber, deleteCh)
+	go ipc.StreamBlocks(&wg, db, blockCh, txsHashCh, deleteCh, last)
 	go streamDeleteBlockWithTransactions(&wg, db, deleteCh, blockCh, txsHashCh)
 
 	go ipc.StreamTransactions(&wg, db, txsCh, txsHashCh)
@@ -282,7 +206,7 @@ func checkForks(c *cli.Context) error {
 	wg.Wait()
 
 	elapsed := time.Now().Sub(stime)
-	log.Printf("Synced %d forked blocks in %.3f (%.0f bps)", count, elapsed.Seconds(), float64(count)/elapsed.Seconds())
+	log.Printf("Processed %d blocks in %.3f (%.0f bps)", count, elapsed.Seconds(), float64(count)/elapsed.Seconds())
 
 	return err
 }
@@ -364,14 +288,6 @@ func main() {
 			Before:  altsrc.InitInputSourceWithContext(genericFlags, altsrc.NewYamlSourceFromFlagFunc("config")),
 			Flags:   genericFlags,
 			Action:  pullNewBlocks,
-		},
-		{
-			Name:    "checkforks",
-			Aliases: []string{"cf"},
-			Usage:   "Check for fork and fetch active chain from ebakus node",
-			Before:  altsrc.InitInputSourceWithContext(genericFlags, altsrc.NewYamlSourceFromFlagFunc("config")),
-			Flags:   genericFlags,
-			Action:  checkForks,
 		},
 		{
 			Name:    "getblock",
