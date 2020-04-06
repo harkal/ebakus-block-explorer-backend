@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"bitbucket.org/pantelisss/ebakus_server/db"
+	"bitbucket.org/pantelisss/ebakus_server/ipc"
 	ipcModule "bitbucket.org/pantelisss/ebakus_server/ipc"
 	"bitbucket.org/pantelisss/ebakus_server/models"
 	"bitbucket.org/pantelisss/ebakus_server/redis"
@@ -119,6 +120,30 @@ func streamInsertTransactions(wg *sync.WaitGroup, db *db.DBClient, txsCh <-chan 
 	fmt.Println("Finished inserting", count, "transactions")
 }
 
+func streamDeleteBlockWithTransactions(wg *sync.WaitGroup, db *db.DBClient, dCh <-chan *models.Block, bCh chan<- *models.Block, tCh chan<- ipc.TransactionWithTimestamp) {
+	defer wg.Done()
+
+	for bl := range dCh {
+		err := db.DeleteBlockWithTransactionsByID(uint64(bl.Number))
+
+		if err != nil {
+			log.Println("Error streamDeleteBlockWithTransactions", err.Error())
+
+			// TODO: exit here?
+
+		} else {
+			bCh <- bl
+
+			for _, tx := range bl.Transactions {
+				tCh <- ipc.TransactionWithTimestamp{Hash: tx, Timestamp: bl.TimeStamp}
+			}
+		}
+	}
+
+	close(bCh)
+	close(tCh)
+}
+
 func pullNewBlocks(c *cli.Context) error {
 	lock, err := lockfile.New(filepath.Join(os.TempDir(), "ebakus-crawler-"+c.String("dbname")+".lock"))
 	if err != nil {
@@ -191,6 +216,73 @@ func pullNewBlocks(c *cli.Context) error {
 
 	elapsed := time.Now().Sub(stime)
 	log.Printf("Processed %d blocks in %.3f (%.0f bps)", count, elapsed.Seconds(), float64(count)/elapsed.Seconds())
+
+	return err
+}
+
+func checkForks(c *cli.Context) error {
+	lock, err := lockfile.New(filepath.Join(os.TempDir(), "ebakus-check-fork-"+c.String("dbname")+".lock"))
+	if err != nil {
+		fmt.Printf("Cannot init lock. reason: %v", err)
+		return err
+	}
+	err = lock.TryLock()
+	if err != nil {
+		fmt.Printf("Cannot lock %q, reason: %v", lock, err)
+		return err
+	}
+	defer lock.Unlock()
+
+	ipcFile := expandHome(c.String("ipc"))
+	ipc, err := ipcModule.NewIPCInterface(ipcFile)
+	if err != nil {
+		log.Fatal("Failed to connect to ebakus", err)
+	}
+
+	err = db.InitFromCli(c)
+	if err != nil {
+		log.Fatal("Failed to load db client")
+	}
+	db := db.GetClient()
+
+	if err := redis.InitFromCli(c); err != nil {
+		log.Fatal("Failed to connect to redis", err)
+	}
+	defer redis.Pool.Close()
+
+	lastKnownBlockNumber, err := db.GetLatestBlockNumber()
+	if err != nil {
+		return err
+	}
+
+	log.Printf("Will start checking for forks from block number %d", lastKnownBlockNumber)
+
+	stime := time.Now()
+
+	deleteCh := make(chan *models.Block, 512)
+	blockCh := make(chan *models.Block, 512)
+	txsHashCh := make(chan ipcModule.TransactionWithTimestamp, 512)
+	txsCh := make(chan models.TransactionFull, 512)
+
+	var wg sync.WaitGroup
+
+	wg.Add(5)
+	go ipc.ExamineBlocksForFork(&wg, db, lastKnownBlockNumber, deleteCh)
+	go streamDeleteBlockWithTransactions(&wg, db, deleteCh, blockCh, txsHashCh)
+
+	go ipc.StreamTransactions(&wg, db, txsCh, txsHashCh)
+	go streamInsertTransactions(&wg, db, txsCh)
+
+	var count int
+	go func() {
+		defer wg.Done()
+		count, _ = streamInsertBlocks(db, blockCh)
+	}()
+
+	wg.Wait()
+
+	elapsed := time.Now().Sub(stime)
+	log.Printf("Synced %d forked blocks in %.3f (%.0f bps)", count, elapsed.Seconds(), float64(count)/elapsed.Seconds())
 
 	return err
 }
@@ -272,6 +364,14 @@ func main() {
 			Before:  altsrc.InitInputSourceWithContext(genericFlags, altsrc.NewYamlSourceFromFlagFunc("config")),
 			Flags:   genericFlags,
 			Action:  pullNewBlocks,
+		},
+		{
+			Name:    "checkforks",
+			Aliases: []string{"cf"},
+			Usage:   "Check for fork and fetch active chain from ebakus node",
+			Before:  altsrc.InitInputSourceWithContext(genericFlags, altsrc.NewYamlSourceFromFlagFunc("config")),
+			Flags:   genericFlags,
+			Action:  checkForks,
 		},
 		{
 			Name:    "getblock",

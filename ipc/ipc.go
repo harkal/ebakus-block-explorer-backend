@@ -155,6 +155,32 @@ func (ipc *IPCInterface) StreamBlocks(wg *sync.WaitGroup, bCh chan<- *models.Blo
 	return nil
 }
 
+func (ipc *IPCInterface) ExamineBlocksForFork(wg *sync.WaitGroup, db *db.DBClient, lookupBlockNumber uint64, dCh chan<- *models.Block) error {
+	defer wg.Done()
+
+	for i := lookupBlockNumber; i > 0; i-- {
+		bl, err := ipc.GetBlock(i)
+		if err != nil {
+			return err
+		}
+
+		localBl, err := db.GetBlockByID(i)
+		if err != nil {
+			return err
+		}
+
+		if bl.Hash != localBl.Hash {
+			dCh <- bl
+		} else {
+			break
+		}
+	}
+
+	close(dCh)
+
+	return nil
+}
+
 func (ipc *IPCInterface) GetTransactionByHash(hash *common.Hash) (*models.Transaction, *models.TransactionReceipt, error) {
 	var tx models.Transaction
 	var txr models.TransactionReceipt
