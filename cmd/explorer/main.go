@@ -8,10 +8,10 @@ import (
 	"os/user"
 	"path/filepath"
 
-	api "bitbucket.org/pantelisss/ebakus_server/api"
-	"bitbucket.org/pantelisss/ebakus_server/db"
-	ipcModule "bitbucket.org/pantelisss/ebakus_server/ipc"
-	"bitbucket.org/pantelisss/ebakus_server/redis"
+	api "github.com/ebakus/ebakus-block-explorer-backend/api"
+	"github.com/ebakus/ebakus-block-explorer-backend/db"
+	ipcModule "github.com/ebakus/ebakus-block-explorer-backend/ipc"
+	"github.com/ebakus/ebakus-block-explorer-backend/redis"
 
 	"net/http"
 

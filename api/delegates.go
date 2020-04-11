@@ -4,9 +4,9 @@ import (
 	"errors"
 	"sort"
 
-	"bitbucket.org/pantelisss/ebakus_server/db"
-	"bitbucket.org/pantelisss/ebakus_server/ipc"
-	"bitbucket.org/pantelisss/ebakus_server/models"
+	"github.com/ebakus/ebakus-block-explorer-backend/db"
+	"github.com/ebakus/ebakus-block-explorer-backend/ipc"
+	"github.com/ebakus/ebakus-block-explorer-backend/models"
 	"github.com/ebakus/go-ebakus/common"
 	"github.com/ebakus/go-ebakus/common/hexutil"
 	"github.com/ebakus/go-ebakus/params"

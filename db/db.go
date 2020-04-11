@@ -10,8 +10,8 @@ import (
 	"strings"
 	"text/template"
 
-	"bitbucket.org/pantelisss/ebakus_server/models"
-	"bitbucket.org/pantelisss/ebakus_server/redis"
+	"github.com/ebakus/ebakus-block-explorer-backend/models"
+	"github.com/ebakus/ebakus-block-explorer-backend/redis"
 
 	"github.com/ebakus/go-ebakus/common"
 	"github.com/ebakus/go-ebakus/common/hexutil"

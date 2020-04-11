@@ -1,4 +1,4 @@
-module bitbucket.org/pantelisss/ebakus_server
+module github.com/ebakus/ebakus-block-explorer-backend
 
 go 1.13
 
