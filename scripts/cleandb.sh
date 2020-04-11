@@ -7,7 +7,7 @@ echo "\n* Create postgres db"
 createdb $DB_NAME
 
 echo "\n* Create db structure from schema"
-psql -d $DB_NAME -a -f $GOPATH/src/bitbucket.org/pantelisss/ebakus_server/schema/create.sql
+psql -d $DB_NAME -a -f $GOPATH/src/github.com/ebakus/ebakus-block-explorer-backend/schema/create.sql
 
 echo "\n* Clean redis"
 redis-cli FLUSHDB

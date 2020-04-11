@@ -6,8 +6,8 @@ import (
 	"math/big"
 	"sync"
 
-	"bitbucket.org/pantelisss/ebakus_server/db"
-	"bitbucket.org/pantelisss/ebakus_server/models"
+	"github.com/ebakus/ebakus-block-explorer-backend/db"
+	"github.com/ebakus/ebakus-block-explorer-backend/models"
 
 	"github.com/ebakus/go-ebakus/common"
 

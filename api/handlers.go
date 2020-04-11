@@ -9,10 +9,10 @@ import (
 	"net/http"
 	"strconv"
 
-	"bitbucket.org/pantelisss/ebakus_server/db"
-	"bitbucket.org/pantelisss/ebakus_server/ipc"
-	"bitbucket.org/pantelisss/ebakus_server/models"
-	"bitbucket.org/pantelisss/ebakus_server/redis"
+	"github.com/ebakus/ebakus-block-explorer-backend/db"
+	"github.com/ebakus/ebakus-block-explorer-backend/ipc"
+	"github.com/ebakus/ebakus-block-explorer-backend/models"
+	"github.com/ebakus/ebakus-block-explorer-backend/redis"
 
 	"github.com/ebakus/go-ebakus/common"
 	"github.com/ebakus/go-ebakus/params"

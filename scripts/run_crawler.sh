@@ -22,5 +22,5 @@ while [ true ]; do
     fi
   fi
 
-  $GOPATH/bin/ebakus_crawler fetchblocks --config $GOPATH/src/bitbucket.org/pantelisss/ebakus_server/configs/default.config.yaml $ipc_arg
+  $GOPATH/bin/ebakus_crawler fetchblocks --config $GOPATH/src/github.com/ebakus/ebakus-block-explorer-backend/configs/default.config.yaml $ipc_arg
 done

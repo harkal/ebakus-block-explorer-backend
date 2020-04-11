@@ -2,11 +2,11 @@
 
 Fetch the project with the proper go tool.
 
-`$ go get -d -v bitbucket.org/pantelisss/ebakus_server`
+`$ go get -d -v github.com/ebakus/ebakus-block-explorer-backend`
 
 Build both executables.
 
-`$ $GOPATH/src/bitbucket.org/pantelisss/ebakus_server/scripts/build.sh`
+`$ $GOPATH/src/github.com/ebakus/ebakus-block-explorer-backend/scripts/build.sh`
 
 Connect to your database and execute the provided sql file located in the schema directory to create all the required tables.
 
