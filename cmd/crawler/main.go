@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"bitbucket.org/pantelisss/ebakus_server/db"
+	"bitbucket.org/pantelisss/ebakus_server/ipc"
 	ipcModule "bitbucket.org/pantelisss/ebakus_server/ipc"
 	"bitbucket.org/pantelisss/ebakus_server/models"
 	"bitbucket.org/pantelisss/ebakus_server/redis"
@@ -119,6 +120,30 @@ func streamInsertTransactions(wg *sync.WaitGroup, db *db.DBClient, txsCh <-chan 
 	fmt.Println("Finished inserting", count, "transactions")
 }
 
+func streamDeleteBlockWithTransactions(wg *sync.WaitGroup, db *db.DBClient, dCh <-chan *models.Block, bCh chan<- *models.Block, tCh chan<- ipc.TransactionWithTimestamp) {
+	defer wg.Done()
+
+	for bl := range dCh {
+		err := db.DeleteBlockWithTransactionsByID(uint64(bl.Number))
+
+		if err != nil {
+			log.Println("Error streamDeleteBlockWithTransactions", err.Error())
+			continue
+			// TODO: exit here?
+
+		}
+
+		bCh <- bl
+
+		for _, tx := range bl.Transactions {
+			tCh <- ipc.TransactionWithTimestamp{Hash: tx, Timestamp: bl.TimeStamp}
+		}
+	}
+
+	close(bCh)
+	close(tCh)
+}
+
 func pullNewBlocks(c *cli.Context) error {
 	lock, err := lockfile.New(filepath.Join(os.TempDir(), "ebakus-crawler-"+c.String("dbname")+".lock"))
 	if err != nil {
@@ -154,30 +179,21 @@ func pullNewBlocks(c *cli.Context) error {
 		log.Fatal("Failed to get last block number")
 	}
 
-	first, err := db.GetLatestBlockNumber()
-	if err != nil {
-		return err
-	}
-
-	first++
-	log.Printf("Going to insert blocks %d to %d (%d)", first, last, last-first+1)
+	log.Printf("Going to insert blocks backwards from %d", last)
 
 	stime := time.Now()
 
+	deleteCh := make(chan *models.Block, 512)
 	blockCh := make(chan *models.Block, 512)
 	txsHashCh := make(chan ipcModule.TransactionWithTimestamp, 512)
 	txsCh := make(chan models.TransactionFull, 512)
 
 	var wg sync.WaitGroup
 
-	workerThreads := c.Int("threads")
-	ops := int64(workerThreads)
-	for i := 0; i < workerThreads; i++ {
-		wg.Add(1)
-		go ipc.StreamBlocks(&wg, blockCh, txsHashCh, &ops, first, last, workerThreads, i)
-	}
+	wg.Add(5)
+	go ipc.StreamBlocks(&wg, db, blockCh, txsHashCh, deleteCh, last)
+	go streamDeleteBlockWithTransactions(&wg, db, deleteCh, blockCh, txsHashCh)
 
-	wg.Add(3)
 	go ipc.StreamTransactions(&wg, db, txsCh, txsHashCh)
 	go streamInsertTransactions(&wg, db, txsCh)
 

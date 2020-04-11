@@ -447,6 +447,38 @@ func (cli *DBClient) GetTransactionByHash(hash string) (*models.TransactionFull,
 	return &models.TransactionFull{Tx: &tx, Txr: &txr}, nil
 }
 
+// DeleteTransactionsAndBlockByID deletes the block and its transactions by block number
+func (cli *DBClient) DeleteBlockWithTransactionsByID(number uint64) (err error) {
+	txn, err := cli.db.Begin()
+	if err != nil {
+		return err
+	}
+
+	defer func() {
+		if p := recover(); p != nil {
+			// a panic occurred, rollback and repanic
+			txn.Rollback()
+			panic(p)
+		} else if err != nil {
+			txn.Rollback()
+		} else {
+			err = txn.Commit()
+		}
+	}()
+
+	_, err = txn.Exec("DELETE FROM blocks WHERE number = $1", number)
+	if err != nil {
+		return err
+	}
+
+	_, err = txn.Exec("DELETE FROM transactions WHERE block_number = $1", number)
+	if err != nil {
+		return err
+	}
+
+	return err
+}
+
 func (cli *DBClient) GetAddressTotals(address string) (blockRewards *big.Int, txCount uint64, err error) {
 
 	query := strings.Join([]string{"SELECT count(*) FROM transactions WHERE addr_from = E'\\\\", address[1:], "' OR addr_to = E'\\\\", address[1:], "'"}, "")

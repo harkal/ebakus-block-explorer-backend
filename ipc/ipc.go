@@ -5,7 +5,6 @@ import (
 	"log"
 	"math/big"
 	"sync"
-	"sync/atomic"
 
 	"bitbucket.org/pantelisss/ebakus_server/db"
 	"bitbucket.org/pantelisss/ebakus_server/models"
@@ -127,30 +126,44 @@ func (ipc *IPCInterface) StreamTransactions(wg *sync.WaitGroup, db *db.DBClient,
 	close(tCh)
 }
 
-func (ipc *IPCInterface) StreamBlocks(wg *sync.WaitGroup, bCh chan<- *models.Block, tCh chan<- TransactionWithTimestamp, ops *int64, first, last uint64, stride, offset int) error {
+func (ipc *IPCInterface) StreamBlocks(wg *sync.WaitGroup, db *db.DBClient, bCh chan<- *models.Block, tCh chan<- TransactionWithTimestamp, dCh chan<- *models.Block, lastBlockNumber uint64) error {
 	defer wg.Done()
-	count := last - first + 1
-	if count < 0 {
-		return ErrInvalideBlockRange
-	}
 
-	for i := uint64(offset); i < count; i = i + uint64(stride) {
-		bl, err := ipc.GetBlock(i + first)
+	for i := lastBlockNumber; i >= 0; {
+		bl, err := ipc.GetBlock(i)
 		if err != nil {
 			return err
 		}
 
-		bCh <- bl
-
-		for _, tx := range bl.Transactions {
-			tCh <- TransactionWithTimestamp{Hash: tx, Timestamp: bl.TimeStamp}
+		localBl, err := db.GetBlockByID(i)
+		if err != nil {
+			return err
 		}
+
+		localFound := localBl.Hash != common.HexToHash("0x0000000000000000000000000000000000000000000000000000000000000000")
+
+		if !localFound {
+			bCh <- bl
+
+			for _, tx := range bl.Transactions {
+				tCh <- TransactionWithTimestamp{Hash: tx, Timestamp: bl.TimeStamp}
+			}
+
+		} else if localFound && bl.Hash != localBl.Hash {
+			dCh <- bl
+
+			// known block with correct hash
+		} else {
+			break
+		}
+
+		if i == 0 {
+			break
+		}
+		i--
 	}
 
-	if atomic.AddInt64(ops, -1) == 0 {
-		close(bCh)
-		close(tCh)
-	}
+	close(dCh)
 
 	return nil
 }
