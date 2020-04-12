@@ -539,7 +539,7 @@ func (cli *DBClient) GetTransactionsByAddress(address string, addrtype models.Ad
 	case models.ADDRESS_ALL:
 		query = strings.Join([]string{query, " WHERE addr_to = E'\\\\", address[1:], "'", " or addr_from = E'\\\\", address[1:], "'"}, "")
 	case models.ADDRESS_BLOCKHASH:
-		query = strings.Join([]string{query, " WHERE block_hash = E'\\\\", address[1:], "'"}, "")
+		query = strings.Join([]string{"SELECT transactions.* FROM transactions, blocks WHERE blocks.number =  transactions.block_number AND blocks.hash = E'\\\\", address[1:], "'"}, "")
 	}
 
 	if order != "asc" {
