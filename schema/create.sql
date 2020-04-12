@@ -42,3 +42,10 @@ CREATE INDEX txfrom_idx ON transactions USING btree (addr_from);
 CREATE INDEX txto_idx ON transactions USING btree (addr_to);
 CREATE INDEX txblock_number_idx ON transactions USING btree (block_number);
 CREATE INDEX txtimestamp_idx ON transactions USING btree (timestamp);
+
+CREATE TABLE balances (
+  address bytea PRIMARY KEY,
+  amount BIGINT
+);
+
+CREATE INDEX bl_amount_idx ON balances USING btree (amount);

@@ -23,6 +23,11 @@ import (
 	"github.com/urfave/cli/altsrc"
 )
 
+func doRichlist(c *cli.Context) error {
+
+	return nil
+}
+
 func getBlock(c *cli.Context) error {
 	number, err := strconv.Atoi(c.Args().Get(0))
 	if err != nil {
@@ -225,7 +230,7 @@ func main() {
 			Email: "burn665@gmail.com",
 		},
 	}
-	app.Copyright = "(c) 2018 Ebakus Team"
+	app.Copyright = "(c) 2020 Ebakus Team"
 	app.Usage = "Run in various modes depending on function mode"
 
 	genericFlags := []cli.Flag{
@@ -296,6 +301,14 @@ func main() {
 			Before:  altsrc.InitInputSourceWithContext(genericFlags, altsrc.NewYamlSourceFromFlagFunc("config")),
 			Flags:   genericFlags,
 			Action:  getBlock,
+		},
+		{
+			Name:    "computerich",
+			Aliases: []string{"cr"},
+			Usage:   "Compute richlist",
+			Before:  altsrc.InitInputSourceWithContext(genericFlags, altsrc.NewYamlSourceFromFlagFunc("config")),
+			Flags:   genericFlags,
+			Action:  doRichlist,
 		},
 	}
 
