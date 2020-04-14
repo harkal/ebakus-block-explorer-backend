@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"math/big"
 	"os"
 	"os/user"
 	"path/filepath"
@@ -17,6 +18,8 @@ import (
 	"github.com/ebakus/ebakus-block-explorer-backend/models"
 	"github.com/ebakus/ebakus-block-explorer-backend/redis"
 
+	"github.com/ebakus/go-ebakus/common"
+
 	"github.com/nightlyone/lockfile"
 
 	"github.com/urfave/cli"
@@ -24,6 +27,79 @@ import (
 )
 
 func doRichlist(c *cli.Context) error {
+	lock, err := lockfile.New(filepath.Join(os.TempDir(), "ebakus-crawler-"+c.String("dbname")+".lock"))
+	if err != nil {
+		fmt.Printf("Cannot init lock. reason: %v", err)
+		return err
+	}
+	err = lock.TryLock()
+	if err != nil {
+		fmt.Printf("Cannot lock %q, reason: %v", lock, err)
+		return err
+	}
+	defer lock.Unlock()
+
+	ipcFile := expandHome(c.String("ipc"))
+	ipc, err := ipcModule.NewIPCInterface(ipcFile)
+	if err != nil {
+		log.Fatal("Failed to connect to ebakus", err)
+	}
+
+	err = db.InitFromCli(c)
+	if err != nil {
+		log.Fatal("Failed to load db client")
+	}
+	db := db.GetClient()
+
+	// if err := redis.InitFromCli(c); err != nil {
+	// 	log.Fatal("Failed to connect to redis", err)
+	// }
+	// defer redis.Pool.Close()
+
+	last, err := ipc.GetBlockNumber()
+	if err != nil {
+		log.Fatal("Failed to get last block number")
+	}
+
+	log.Printf("Going to insert blocks backwards from %d", last)
+
+	accounts := make(map[common.Address]uint64)
+
+	for i := last; i >= 0; i-- {
+		block, err := db.GetBlockByID(i)
+		if err != nil {
+			break
+		}
+
+		blockNumber := uint64(block.Number)
+
+		txs, err := db.GetTransactionsByAddress(block.Hash.Hex(), models.ADDRESS_BLOCKHASH, 0, 0xffff, "")
+		if err != nil {
+			break
+		}
+
+		// log.Println(block.Number, len(txs))
+
+		for _, tx := range txs {
+			accounts[tx.Tx.From] = blockNumber
+		}
+
+	}
+
+	for address, _ := range accounts {
+		bigBalance, err := ipc.GetAddressBalance(address)
+		if err != nil {
+			continue
+		}
+		staked, err := ipc.GetAddressStaked(address)
+		if err != nil {
+			continue
+		}
+
+		balance := new(big.Int).Div(bigBalance, big.NewInt(1e14)).Uint64()
+
+		db.InsertBalance(address, balance+staked)
+	}
 
 	return nil
 }
