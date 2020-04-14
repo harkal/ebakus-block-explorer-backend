@@ -789,3 +789,47 @@ func (cli *DBClient) InsertBlocks(blocks []*models.Block) error {
 
 	return nil
 }
+
+// InsertBalance inserts/updates the balance of an address
+func (cli *DBClient) InsertBalance(address common.Address, balance uint64) error {
+	sql := `
+		INSERT INTO balances(address, amount) VALUES ($1, $2)
+		ON CONFLICT (address) DO UPDATE 
+  			SET amount = excluded.amount
+	`
+
+	cli.db.QueryRow(sql, address, balance)
+
+	return nil
+}
+
+// GetTopBalances gets the rich list
+func (cli *DBClient) GetTopBalances(limit uint64) ([]models.Balance, error) {
+
+	query := "SELECT address, amount FROM balances ORDER BY amount DESC LIMIT $1"
+	rows, err := cli.db.Query(query, limit)
+
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	result := make([]models.Balance, 0)
+
+	for rows.Next() {
+		var addressBytes []byte
+		var amount uint64
+
+		rows.Scan(&addressBytes, &amount)
+		if err = rows.Err(); err != nil {
+			log.Println(err)
+			return nil, err
+		}
+
+		address := common.BytesToAddress(addressBytes)
+
+		result = append(result, models.Balance{Address: address, Amount: amount})
+	}
+
+	return result, nil
+}
