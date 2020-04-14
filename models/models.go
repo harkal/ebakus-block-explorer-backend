@@ -3,6 +3,7 @@ package models
 import (
 	"encoding/hex"
 	"encoding/json"
+	"fmt"
 	"math/big"
 
 	"github.com/ebakus/go-ebakus/common"
@@ -242,4 +243,14 @@ type DelegateInfo struct {
 type DelegateVoteInfo struct {
 	Address common.Address `json:"address"`
 	Stake   uint64         `json:"stake"`
+}
+
+type Balance struct {
+	Address     common.Address `json:"address"`
+	Amount      uint64         `json:"amount"`
+	BlockNumber uint64         `json:"block_number"`
+}
+
+func (b Balance) MarshalJSON() ([]byte, error) {
+	return []byte(fmt.Sprintf(`{"address":"0x%s","amount":%.4f}`, common.Bytes2Hex(b.Address[:]), float32(b.Amount)/10000.0)), nil
 }

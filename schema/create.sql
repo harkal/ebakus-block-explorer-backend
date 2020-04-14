@@ -45,7 +45,8 @@ CREATE INDEX txtimestamp_idx ON transactions USING btree (timestamp);
 
 CREATE TABLE balances (
   address bytea PRIMARY KEY,
-  amount BIGINT
+  amount BIGINT,
+  block_number BIGINT
 );
 
 CREATE INDEX bl_amount_idx ON balances USING btree (amount);
