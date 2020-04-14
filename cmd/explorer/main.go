@@ -102,6 +102,8 @@ func (ec explorerContext) startServer() cli.ActionFunc {
 		ec.router.HandleFunc("/stats", api.HandleStats).Methods("GET")
 		ec.router.HandleFunc("/stats/{address}", api.HandleStats).Methods("GET")
 
+		ec.router.HandleFunc("/rich-list", api.HandleRichList).Methods("GET")
+
 		ec.router.HandleFunc("/delegates", api.HandleDelegates).Methods("GET")
 		ec.router.HandleFunc("/delegates/{number}", api.HandleDelegates).Methods("GET")
 

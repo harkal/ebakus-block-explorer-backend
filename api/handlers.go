@@ -645,3 +645,65 @@ func HandleChainInfo(w http.ResponseWriter, r *http.Request) {
 		w.Write(out)
 	}
 }
+
+// HandleTxByAddress finds and returns a transaction by address (from or to)
+func HandleRichList(w http.ResponseWriter, r *http.Request) {
+	if r.Method != "GET" {
+		http.Error(w, "error", http.StatusBadRequest)
+		return
+	}
+
+	dbc := db.GetClient()
+	if dbc == nil {
+		log.Printf("! Error: DBClient is not initialized!")
+		http.Error(w, "error", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+
+	offsetString := r.URL.Query().Get("offset")
+	limitString := r.URL.Query().Get("limit")
+
+	var offset, limit uint64
+	var err error
+	if offsetString != "" {
+		offset, err = strconv.ParseUint(offsetString, 10, 32)
+		if err != nil {
+			log.Printf("! Error parsing range: %s", err.Error())
+			http.Error(w, "error", http.StatusBadRequest)
+			return
+		}
+	} else {
+		offset = 0
+	}
+
+	if limitString != "" {
+		limit, err = strconv.ParseUint(limitString, 10, 32)
+		if err != nil {
+			log.Printf("! Error parsing range: %s", err.Error())
+			http.Error(w, "error", http.StatusBadRequest)
+			return
+		}
+	} else {
+		limit = 20
+	}
+
+	log.Println("Request richlist limit/offset: ", limit, offset)
+
+	richlist, err := dbc.GetTopBalances(limit)
+	if err != nil {
+		log.Printf("! Error: %s", err.Error())
+		http.Error(w, "error", http.StatusInternalServerError)
+		return
+	}
+
+	res, err := json.Marshal(richlist)
+
+	if err != nil {
+		log.Printf("! Error: %s", err.Error())
+		http.Error(w, "error", http.StatusInternalServerError)
+	} else {
+		w.Write(res)
+	}
+}
