@@ -26,6 +26,9 @@ import (
 	"github.com/urfave/cli/altsrc"
 )
 
+const maxRichList = 1000
+const maxAccountsPerRun = 1000000
+
 func doRichlist(c *cli.Context) error {
 	lock, err := lockfile.New(filepath.Join(os.TempDir(), "ebakus-crawler-"+c.String("dbname")+".lock"))
 	if err != nil {
@@ -51,21 +54,16 @@ func doRichlist(c *cli.Context) error {
 	}
 	db := db.GetClient()
 
-	// if err := redis.InitFromCli(c); err != nil {
-	// 	log.Fatal("Failed to connect to redis", err)
-	// }
-	// defer redis.Pool.Close()
-
 	last, err := ipc.GetBlockNumber()
 	if err != nil {
 		log.Fatal("Failed to get last block number")
 	}
 
-	log.Printf("Going to insert blocks backwards from %d", last)
+	log.Printf("Going to insert blocks to %d", last)
 
 	accounts := make(map[common.Address]uint64)
 
-	for i := last; i >= 0; i-- {
+	for i := uint64(0); i < last; i++ {
 		block, err := db.GetBlockByID(i)
 		if err != nil {
 			break
@@ -78,27 +76,73 @@ func doRichlist(c *cli.Context) error {
 			break
 		}
 
-		// log.Println(block.Number, len(txs))
+		accounts[block.Producer] = blockNumber
 
 		for _, tx := range txs {
 			accounts[tx.Tx.From] = blockNumber
+			if tx.Tx.To != nil {
+				accounts[*tx.Tx.To] = blockNumber
+			}
 		}
 
+		// log.Println("Max accounts reached", len(accounts))
+		if len(accounts) > maxAccountsPerRun {
+			log.Println("Max accounts reached")
+			break
+		}
 	}
 
-	for address, _ := range accounts {
+	// count, min, _, err := db.GetBalanceStats()
+	// if err != nil {
+	// 	log.Println(err)
+	// }
+
+	log.Println("Total accounts touched: ", len(accounts))
+
+	// addressToBalance := make(map[common.Address]*models.Balance)
+
+	// for _, bal := range balances {
+	// 	addressToBalance[bal.Address] = &bal
+	// }
+
+	for address, bn := range accounts {
+		// balObj := addressToBalance[address]
+
 		bigBalance, err := ipc.GetAddressBalance(address)
 		if err != nil {
+			log.Println("Retrieve balance failed:", address, err)
 			continue
 		}
 		staked, err := ipc.GetAddressStaked(address)
 		if err != nil {
+			log.Println("Retrieve stake failed:", address, err)
 			continue
 		}
 
-		balance := new(big.Int).Div(bigBalance, big.NewInt(1e14)).Uint64()
+		totalBalance := new(big.Int).Div(bigBalance, big.NewInt(1e14)).Uint64() + staked
 
-		db.InsertBalance(address, balance+staked)
+		// if count < maxRichList {
+		// 	if totalBalance < min {
+		// 		continue
+		// 	}
+		// }
+
+		// if balObj != nil {
+		// 	balObj.Amount = totalBalance
+		// } else {
+		// 	addressToBalance[address] = &models.Balance{Address: address, Amount: totalBalance, BlockNumber: bn}
+		// }
+
+		db.InsertBalance(address, totalBalance, bn)
+	}
+
+	balances, err := db.GetTopBalances(maxRichList, 0)
+	if err != nil {
+		log.Println(err)
+	}
+
+	if len(balances) > 0 {
+		db.PurgeBalanceObject(balances[len(balances)-1].Amount)
 	}
 
 	return nil

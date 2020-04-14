@@ -686,12 +686,12 @@ func HandleRichList(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	} else {
-		limit = 20
+		limit = 100
 	}
 
 	log.Println("Request richlist limit/offset: ", limit, offset)
 
-	richlist, err := dbc.GetTopBalances(limit)
+	richlist, err := dbc.GetTopBalances(limit, offset)
 	if err != nil {
 		log.Printf("! Error: %s", err.Error())
 		http.Error(w, "error", http.StatusInternalServerError)
