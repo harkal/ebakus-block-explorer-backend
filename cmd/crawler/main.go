@@ -76,6 +76,10 @@ func doRichlist(c *cli.Context) error {
 
 	i := firstBlock
 	for ; i < lastBlock; i++ {
+		if i%50000 == 0 {
+			log.Println("Fetching block: ", i)
+		}
+
 		block, err := db.GetBlockByID(i)
 		if err != nil {
 			break
@@ -119,7 +123,12 @@ func doRichlist(c *cli.Context) error {
 	// 	addressToBalance[bal.Address] = &bal
 	// }
 
+	i = 0
 	for address, bn := range accounts {
+		i++
+		if i%50000 == 0 {
+			log.Println("Fetching block: ", i, " of ", len(address))
+		}
 		// balObj := addressToBalance[address]
 
 		bigBalance, err := ipc.GetAddressBalance(address)
