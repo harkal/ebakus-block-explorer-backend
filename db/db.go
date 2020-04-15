@@ -82,7 +82,6 @@ func Init(name, host string, port int, user string, pass string) error {
 		return err
 	}
 
-	fmt.Println(conn)
 	tdb, err := sql.Open("postgres", conn)
 
 	if err != nil {
