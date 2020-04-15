@@ -127,7 +127,7 @@ func doRichlist(c *cli.Context) error {
 	for address, bn := range accounts {
 		i++
 		if i%50000 == 0 {
-			log.Println("Fetching block: ", i, " of ", len(address))
+			log.Println("Updateing balance: ", i, " of ", len(accounts))
 		}
 		// balObj := addressToBalance[address]
 
