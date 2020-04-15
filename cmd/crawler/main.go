@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"math/big"
 	"os"
 	"os/user"
 	"path/filepath"
@@ -17,11 +18,149 @@ import (
 	"github.com/ebakus/ebakus-block-explorer-backend/models"
 	"github.com/ebakus/ebakus-block-explorer-backend/redis"
 
+	"github.com/ebakus/go-ebakus/common"
+
 	"github.com/nightlyone/lockfile"
 
 	"github.com/urfave/cli"
 	"github.com/urfave/cli/altsrc"
 )
+
+const maxRichList = 1000
+const maxAccountsPerRun = 1000000
+const rich_list_last_block = "rich_list_last_block"
+
+func doRichlist(c *cli.Context) error {
+	lock, err := lockfile.New(filepath.Join(os.TempDir(), "ebakus-crawler-richlist-"+c.String("dbname")+".lock"))
+	if err != nil {
+		fmt.Printf("Cannot init lock. reason: %v", err)
+		return err
+	}
+	err = lock.TryLock()
+	if err != nil {
+		fmt.Printf("Cannot lock %q, reason: %v", lock, err)
+		return err
+	}
+	defer lock.Unlock()
+
+	ipcFile := expandHome(c.String("ipc"))
+	ipc, err := ipcModule.NewIPCInterface(ipcFile)
+	if err != nil {
+		log.Fatal("Failed to connect to ebakus", err)
+	}
+
+	err = db.InitFromCli(c)
+	if err != nil {
+		log.Fatal("Failed to load db client")
+	}
+	db := db.GetClient()
+
+	lastBlock, err := ipc.GetBlockNumber()
+	if err != nil {
+		log.Fatal("Failed to get last block number")
+	}
+
+	firstBlock, err := db.GetGlobalInt(rich_list_last_block)
+	if err != nil {
+		log.Fatal("Failed to get first block number")
+	}
+
+	log.Printf("Going to process blocks from %d to %d", firstBlock, lastBlock)
+
+	accounts := make(map[common.Address]uint64)
+
+	i := firstBlock
+	for ; i < lastBlock; i++ {
+		block, err := db.GetBlockByID(i)
+		if err != nil {
+			break
+		}
+
+		blockNumber := uint64(block.Number)
+
+		txs, err := db.GetTransactionsByAddress(block.Hash.Hex(), models.ADDRESS_BLOCKHASH, 0, 0xffff, "")
+		if err != nil {
+			break
+		}
+
+		accounts[block.Producer] = blockNumber
+
+		for _, tx := range txs {
+			accounts[tx.Tx.From] = blockNumber
+			if tx.Tx.To != nil {
+				accounts[*tx.Tx.To] = blockNumber
+			}
+		}
+
+		// log.Println("Max accounts reached", len(accounts))
+		if len(accounts) > maxAccountsPerRun {
+			log.Println("Max accounts reached")
+			break
+		}
+	}
+
+	lastBlock = i
+
+	// count, min, _, err := db.GetBalanceStats()
+	// if err != nil {
+	// 	log.Println(err)
+	// }
+
+	log.Println("Total accounts touched: ", len(accounts))
+
+	// addressToBalance := make(map[common.Address]*models.Balance)
+
+	// for _, bal := range balances {
+	// 	addressToBalance[bal.Address] = &bal
+	// }
+
+	for address, bn := range accounts {
+		// balObj := addressToBalance[address]
+
+		bigBalance, err := ipc.GetAddressBalance(address)
+		if err != nil {
+			log.Println("Retrieve balance failed:", address, err)
+			continue
+		}
+		staked, err := ipc.GetAddressStaked(address)
+		if err != nil {
+			log.Println("Retrieve stake failed:", address, err)
+			continue
+		}
+
+		totalBalance := new(big.Int).Div(bigBalance, big.NewInt(1e14)).Uint64() + staked
+
+		// if count < maxRichList {
+		// 	if totalBalance < min {
+		// 		continue
+		// 	}
+		// }
+
+		// if balObj != nil {
+		// 	balObj.Amount = totalBalance
+		// } else {
+		// 	addressToBalance[address] = &models.Balance{Address: address, Amount: totalBalance, BlockNumber: bn}
+		// }
+
+		db.InsertBalance(address, totalBalance, bn)
+	}
+
+	balances, err := db.GetTopBalances(maxRichList, 0)
+	if err != nil {
+		log.Println(err)
+	}
+
+	if len(balances) > 0 {
+		db.PurgeBalanceObject(balances[len(balances)-1].Amount)
+	}
+
+	err = db.SetGlobalInt(rich_list_last_block, lastBlock)
+	if err != nil {
+		log.Fatal("Failed to set last processed block number")
+	}
+
+	return nil
+}
 
 func getBlock(c *cli.Context) error {
 	number, err := strconv.Atoi(c.Args().Get(0))
@@ -225,7 +364,7 @@ func main() {
 			Email: "burn665@gmail.com",
 		},
 	}
-	app.Copyright = "(c) 2018 Ebakus Team"
+	app.Copyright = "(c) 2020 Ebakus Team"
 	app.Usage = "Run in various modes depending on function mode"
 
 	genericFlags := []cli.Flag{
@@ -296,6 +435,14 @@ func main() {
 			Before:  altsrc.InitInputSourceWithContext(genericFlags, altsrc.NewYamlSourceFromFlagFunc("config")),
 			Flags:   genericFlags,
 			Action:  getBlock,
+		},
+		{
+			Name:    "computerich",
+			Aliases: []string{"cr"},
+			Usage:   "Compute richlist",
+			Before:  altsrc.InitInputSourceWithContext(genericFlags, altsrc.NewYamlSourceFromFlagFunc("config")),
+			Flags:   genericFlags,
+			Action:  doRichlist,
 		},
 	}
 

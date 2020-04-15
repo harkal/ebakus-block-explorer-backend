@@ -789,3 +789,96 @@ func (cli *DBClient) InsertBlocks(blocks []*models.Block) error {
 
 	return nil
 }
+
+// InsertBalance inserts/updates the balance of an address
+func (cli *DBClient) InsertBalance(address common.Address, balance uint64, blockNumber uint64) error {
+	sql := `
+		INSERT INTO balances(address, amount, block_number) VALUES (E'\\x%s', %d, %d)
+		ON CONFLICT (address) DO UPDATE 
+  			SET amount = excluded.amount, block_number = excluded.block_number
+	`
+	adr := common.Bytes2Hex(address[:])[:]
+	//	log.Println(fmt.Sprintf(sql, adr, balance, blockNumber))
+	rows, err := cli.db.Query(fmt.Sprintf(sql, adr, balance, blockNumber))
+	rows.Close()
+
+	return err
+}
+
+// GetBalanceStats gets the table stats
+func (cli *DBClient) GetBalanceStats() (uint64, uint64, uint64, error) {
+	query := `select count(*), max(amount), min(amount) from balances`
+	var count, max, min uint64
+	err := cli.db.QueryRow(query).Scan(&count, &max, &min)
+	if err != nil {
+		return 0, 0, 0, err
+	}
+
+	return count, max, min, nil
+}
+
+// GetTopBalances gets the rich list
+func (cli *DBClient) GetTopBalances(limit uint64, offset uint64) ([]models.Balance, error) {
+
+	query := "SELECT address, amount, block_number FROM balances ORDER BY amount DESC LIMIT $1 OFFSET $2"
+	rows, err := cli.db.Query(query, limit, offset)
+
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	result := make([]models.Balance, 0)
+
+	for rows.Next() {
+		var addressBytes []byte
+		var amount uint64
+		var blockNumber uint64
+
+		rows.Scan(&addressBytes, &amount, &blockNumber)
+		if err = rows.Err(); err != nil {
+			log.Println(err)
+			return nil, err
+		}
+
+		address := common.BytesToAddress(addressBytes)
+
+		result = append(result, models.Balance{Address: address, Amount: amount, BlockNumber: blockNumber})
+	}
+
+	return result, nil
+}
+
+// PurgeBalanceObject purges balances less than minAmount
+func (cli *DBClient) PurgeBalanceObject(minAmount uint64) error {
+	query := `DELETE FROM balances WHERE amount < $1`
+
+	cli.db.QueryRow(query, minAmount)
+
+	return nil
+}
+
+// GetGlobalInt gets global int
+func (cli *DBClient) GetGlobalInt(varName string) (uint64, error) {
+	query := `SELECT value_int FROM globals WHERE var_name = $1`
+	varInt := uint64(0)
+	cli.db.QueryRow(query, varName).Scan(&varInt)
+	return varInt, nil
+}
+
+// SetGlobalInt gets global int
+func (cli *DBClient) SetGlobalInt(varName string, valInt uint64) error {
+	sql := `
+		INSERT INTO globals(var_name, value_int) VALUES ($1, $2)
+		ON CONFLICT (var_name) DO UPDATE SET value_int = excluded.value_int
+	`
+
+	rows, err := cli.db.Query(sql, varName, valInt)
+	if err != nil {
+		log.Println(err)
+		return err
+	}
+	rows.Close()
+
+	return err
+}
