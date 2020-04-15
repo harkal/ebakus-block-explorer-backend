@@ -123,6 +123,9 @@ func doRichlist(c *cli.Context) error {
 	// 	addressToBalance[bal.Address] = &bal
 	// }
 
+	systemContractAddress := common.HexToAddress("0x0000000000000000000000000000000000000101")
+	delete(accounts, systemContractAddress)
+
 	i = 0
 	for address, bn := range accounts {
 		i++
