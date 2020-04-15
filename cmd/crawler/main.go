@@ -28,6 +28,7 @@ import (
 
 const maxRichList = 1000
 const maxAccountsPerRun = 1000000
+const maxBlocksPerRun = 500000
 const rich_list_last_block = "rich_list_last_block"
 
 func doRichlist(c *cli.Context) error {
@@ -63,6 +64,10 @@ func doRichlist(c *cli.Context) error {
 	firstBlock, err := db.GetGlobalInt(rich_list_last_block)
 	if err != nil {
 		log.Fatal("Failed to get first block number")
+	}
+
+	if lastBlock-firstBlock > maxBlocksPerRun {
+		lastBlock = firstBlock + maxBlocksPerRun
 	}
 
 	log.Printf("Going to process blocks from %d to %d", firstBlock, lastBlock)
