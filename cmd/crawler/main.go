@@ -28,6 +28,7 @@ import (
 
 const maxRichList = 1000
 const maxAccountsPerRun = 1000000
+const rich_list_last_block = "rich_list_last_block"
 
 func doRichlist(c *cli.Context) error {
 	lock, err := lockfile.New(filepath.Join(os.TempDir(), "ebakus-crawler-"+c.String("dbname")+".lock"))
@@ -54,16 +55,22 @@ func doRichlist(c *cli.Context) error {
 	}
 	db := db.GetClient()
 
-	last, err := ipc.GetBlockNumber()
+	lastBlock, err := ipc.GetBlockNumber()
 	if err != nil {
 		log.Fatal("Failed to get last block number")
 	}
 
-	log.Printf("Going to insert blocks to %d", last)
+	firstBlock, err := db.GetGlobalInt(rich_list_last_block)
+	if err != nil {
+		log.Fatal("Failed to get first block number")
+	}
+
+	log.Printf("Going to process blocks from %d to %d", firstBlock, lastBlock)
 
 	accounts := make(map[common.Address]uint64)
 
-	for i := uint64(0); i < last; i++ {
+	i := firstBlock
+	for ; i < lastBlock; i++ {
 		block, err := db.GetBlockByID(i)
 		if err != nil {
 			break
@@ -91,6 +98,8 @@ func doRichlist(c *cli.Context) error {
 			break
 		}
 	}
+
+	lastBlock = i
 
 	// count, min, _, err := db.GetBalanceStats()
 	// if err != nil {
@@ -143,6 +152,11 @@ func doRichlist(c *cli.Context) error {
 
 	if len(balances) > 0 {
 		db.PurgeBalanceObject(balances[len(balances)-1].Amount)
+	}
+
+	err = db.SetGlobalInt(rich_list_last_block, lastBlock)
+	if err != nil {
+		log.Fatal("Failed to set last processed block number")
 	}
 
 	return nil
