@@ -31,7 +31,7 @@ const maxAccountsPerRun = 1000000
 const rich_list_last_block = "rich_list_last_block"
 
 func doRichlist(c *cli.Context) error {
-	lock, err := lockfile.New(filepath.Join(os.TempDir(), "ebakus-crawler-"+c.String("dbname")+".lock"))
+	lock, err := lockfile.New(filepath.Join(os.TempDir(), "ebakus-crawler-richlist-"+c.String("dbname")+".lock"))
 	if err != nil {
 		fmt.Printf("Cannot init lock. reason: %v", err)
 		return err
