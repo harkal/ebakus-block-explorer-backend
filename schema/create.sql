@@ -50,3 +50,9 @@ CREATE TABLE balances (
 );
 
 CREATE INDEX bl_amount_idx ON balances USING btree (amount);
+
+CREATE TABLE globals (
+  var_name CHAR(64) PRIMARY KEY,
+  value_int BIGINT,
+  value_str VARCHAR(64)
+)

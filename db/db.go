@@ -857,3 +857,28 @@ func (cli *DBClient) PurgeBalanceObject(minAmount uint64) error {
 
 	return nil
 }
+
+// GetGlobalInt gets global int
+func (cli *DBClient) GetGlobalInt(varName string) (uint64, error) {
+	query := `SELECT value_int FROM globals WHERE var_name = $1`
+	varInt := uint64(0)
+	cli.db.QueryRow(query, varName).Scan(&varInt)
+	return varInt, nil
+}
+
+// SetGlobalInt gets global int
+func (cli *DBClient) SetGlobalInt(varName string, valInt uint64) error {
+	sql := `
+		INSERT INTO globals(var_name, value_int) VALUES ($1, $2)
+		ON CONFLICT (var_name) DO UPDATE SET value_int = excluded.value_int
+	`
+
+	rows, err := cli.db.Query(sql, varName, valInt)
+	if err != nil {
+		log.Println(err)
+		return err
+	}
+	rows.Close()
+
+	return err
+}
