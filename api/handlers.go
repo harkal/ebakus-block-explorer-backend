@@ -707,3 +707,13 @@ func HandleRichList(w http.ResponseWriter, r *http.Request) {
 		w.Write(res)
 	}
 }
+
+// HandleAddReverseRegistrar inserts a new namehash -> name map
+func HandleAddReverseRegistrar(w http.ResponseWriter, r *http.Request) {
+	http.Error(w, "error", http.StatusNotImplemented)
+}
+
+// HandleGetReverseRegistrar returns the address for a namehash
+func HandleGetReverseRegistrar(w http.ResponseWriter, r *http.Request) {
+	http.Error(w, "error", http.StatusNotImplemented)
+}
