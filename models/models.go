@@ -254,3 +254,13 @@ type Balance struct {
 func (b Balance) MarshalJSON() ([]byte, error) {
 	return []byte(fmt.Sprintf(`{"address":"0x%s","amount":%.4f}`, common.Bytes2Hex(b.Address[:]), float32(b.Amount)/10000.0)), nil
 }
+
+type ENS struct {
+	Address common.Address `json:"address"`
+	Hash    common.Hash    `json:"hash"`
+	Name    string         `json:"name"`
+}
+
+func (e ENS) MarshalJSON() ([]byte, error) {
+	return []byte(fmt.Sprintf(`{"address":"0x%s","hash":"0x%s","name":"%s"}`, common.Bytes2Hex(e.Address[:]), common.Bytes2Hex(e.Hash[:]), e.Name)), nil
+}
