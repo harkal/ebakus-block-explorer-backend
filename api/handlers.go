@@ -1,6 +1,7 @@
 package webapi
 
 import (
+	"database/sql"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -646,7 +647,7 @@ func HandleChainInfo(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// HandleTxByAddress finds and returns a transaction by address (from or to)
+// HandleRichList returns addresses and its balances
 func HandleRichList(w http.ResponseWriter, r *http.Request) {
 	if r.Method != "GET" {
 		http.Error(w, "error", http.StatusBadRequest)
@@ -710,10 +711,88 @@ func HandleRichList(w http.ResponseWriter, r *http.Request) {
 
 // HandleAddReverseRegistrar inserts a new namehash -> name map
 func HandleAddReverseRegistrar(w http.ResponseWriter, r *http.Request) {
-	http.Error(w, "error", http.StatusNotImplemented)
+	if r.Method != "POST" {
+		http.Error(w, "error", http.StatusBadRequest)
+		return
+	}
+
+	dbc := db.GetClient()
+	if dbc == nil {
+		log.Printf("! Error: DBClient is not initialized!")
+		http.Error(w, "error", http.StatusInternalServerError)
+		return
+	}
+
+	decoder := json.NewDecoder(r.Body)
+	var ens models.ENS
+	err := decoder.Decode(&ens)
+	if err != nil {
+		log.Println("Error InsertEns failed", err.Error())
+		http.Error(w, "error", http.StatusBadRequest)
+		return
+	}
+
+	err = dbc.InsertEns(ens)
+	if err != nil {
+		log.Println("Error InsertEns failed", err.Error())
+		http.Error(w, "error", http.StatusBadRequest)
+		return
+	}
+
+	res, err := json.Marshal(ens)
+
+	if err != nil {
+		log.Printf("! Error: %s", err.Error())
+		http.Error(w, "error", http.StatusInternalServerError)
+	} else {
+		w.Write(res)
+	}
 }
 
 // HandleGetReverseRegistrar returns the address for a namehash
 func HandleGetReverseRegistrar(w http.ResponseWriter, r *http.Request) {
-	http.Error(w, "error", http.StatusNotImplemented)
+	if r.Method != "GET" {
+		http.Error(w, "error", http.StatusBadRequest)
+		return
+	}
+
+	dbc := db.GetClient()
+	if dbc == nil {
+		log.Printf("! Error: DBClient is not initialized!")
+		http.Error(w, "error", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+
+	vars := mux.Vars(r)
+	address, ok := vars["address"]
+	if !ok {
+		log.Printf("! Error: %s", errors.New("Parameter is address"))
+		http.Error(w, "error", http.StatusBadRequest)
+		return
+	}
+
+	name, err := dbc.GetEnsName(address)
+	if err != nil {
+		log.Printf("! Error: %s", err.Error())
+		if err == sql.ErrNoRows {
+			http.Error(w, http.StatusText(404), http.StatusNotFound)
+		} else {
+			http.Error(w, "error", http.StatusInternalServerError)
+		}
+		return
+	}
+
+	res := make(map[string]interface{})
+	res["name"] = name
+
+	out, err := json.Marshal(res)
+
+	if err != nil {
+		log.Printf("! Error: %s", err.Error())
+		http.Error(w, "error", http.StatusInternalServerError)
+	} else {
+		w.Write(out)
+	}
 }
