@@ -793,7 +793,7 @@ func (cli *DBClient) InsertBlocks(blocks []*models.Block) error {
 func (cli *DBClient) InsertBalance(address common.Address, balance uint64, blockNumber uint64) error {
 	sql := `
 		INSERT INTO balances(address, amount, block_number) VALUES (E'\\x%s', %d, %d)
-		ON CONFLICT (address) DO UPDATE 
+		ON CONFLICT (address) DO UPDATE
   			SET amount = excluded.amount, block_number = excluded.block_number
 	`
 	adr := common.Bytes2Hex(address[:])[:]
@@ -880,4 +880,27 @@ func (cli *DBClient) SetGlobalInt(varName string, valInt uint64) error {
 	rows.Close()
 
 	return err
+}
+
+// InsertEns inserts/updates the address for a namehash
+func (cli *DBClient) InsertEns(ens models.ENS) error {
+	sql := `
+		INSERT INTO ens(address, hash, name) VALUES (E'\\x%s', E'\\x%s', '%s')
+		ON CONFLICT (address) DO UPDATE SET hash = excluded.hash, name = excluded.name
+	`
+	adr := common.Bytes2Hex(ens.Address[:])[:]
+	namehash := common.Bytes2Hex(ens.Hash[:])[:]
+	rows, err := cli.db.Query(fmt.Sprintf(sql, adr, namehash, ens.Name))
+	rows.Close()
+
+	return err
+}
+
+// GetEnsName gets the table stats
+func (cli *DBClient) GetEnsName(address string) (string, error) {
+	query := strings.Join([]string{"SELECT name FROM ens WHERE address = E'\\\\", address[1:], "'"}, "")
+	var name string
+	rows := cli.db.QueryRow(query)
+	err := rows.Scan(&name)
+	return name, err
 }
