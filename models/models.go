@@ -29,6 +29,7 @@ type Block struct {
 	Transactions     []common.Hash    `json:"transactions"`
 	Delegates        []common.Address `json:"delegates"`
 	Producer         common.Address   `json:"producer"`
+	ProducerEns      *string          `json:"producerEns"`
 }
 
 type JSONBlock Block
@@ -51,6 +52,7 @@ func (b Block) MarshalJSON() ([]byte, error) {
 		GasLimit         uint64           `json:"gasLimit"`
 		Delegates        []common.Address `json:"delegates"`
 		Producer         common.Address   `json:"producer"`
+		ProducerEns      *string          `json:"producerEns"`
 	}
 
 	enc.Number = uint64(b.Number)
@@ -66,6 +68,7 @@ func (b Block) MarshalJSON() ([]byte, error) {
 	enc.GasLimit = uint64(b.GasLimit)
 	enc.Delegates = b.Delegates
 	enc.Producer = b.Producer
+	enc.ProducerEns = b.ProducerEns
 
 	return json.Marshal(&enc)
 }
@@ -80,7 +83,9 @@ type Transaction struct {
 	BlockNumber      hexutil.Uint64  `json:"blockNumber"`
 	TransactionIndex hexutil.Uint64  `json:"transactionIndex"`
 	From             common.Address  `json:"from"`
+	FromEns          *string         `json:"fromEns"`
 	To               *common.Address `json:"to"`
+	ToEns            *string         `json:"toEns"`
 	Value            hexutil.Big     `json:"value"`
 	GasLimit         hexutil.Uint64  `json:"gas"`
 	GasPrice         hexutil.Uint64  `json:"gasPrice"`
@@ -89,10 +94,11 @@ type Transaction struct {
 }
 
 type TransactionReceipt struct {
-	Status            hexutil.Uint64  `json:"status"`
-	GasUsed           hexutil.Uint64  `json:"gasUsed"`
-	CumulativeGasUsed hexutil.Uint64  `json:"cumulativeGasUsed"`
-	ContractAddress   *common.Address `json:"contractAddress"`
+	Status             hexutil.Uint64  `json:"status"`
+	GasUsed            hexutil.Uint64  `json:"gasUsed"`
+	CumulativeGasUsed  hexutil.Uint64  `json:"cumulativeGasUsed"`
+	ContractAddress    *common.Address `json:"contractAddress"`
+	ContractAddressEns *string         `json:"contractAddressEns"`
 }
 
 type TransactionFull struct {
@@ -180,23 +186,26 @@ func (t *InputData) UnmarshalJSON(b []byte) error {
 func (tf TransactionFull) MarshalJSON() ([]byte, error) {
 	// Struct with only the fields we want in the final JSON?
 	var enc struct {
-		Hash              common.Hash     `json:"hash"`
-		Timestamp         uint64          `json:"timestamp"`
-		Status            uint64          `json:"status"`
-		Nonce             uint64          `json:"nonce"`
-		BlockHash         common.Hash     `json:"blockHash"`
-		BlockNumber       uint64          `json:"blockNumber"`
-		TransactionIndex  uint64          `json:"transactionIndex"`
-		From              common.Address  `json:"from"`
-		To                *common.Address `json:"to"`
-		Value             *big.Int        `json:"value"`
-		GasUsed           uint64          `json:"gasUsed"`
-		CumulativeGasUsed uint64          `json:"cumulativeGasUsed"`
-		GasLimit          uint64          `json:"gasLimit"`
-		GasPrice          uint64          `json:"gasPrice"`
-		WorkNonce         uint64          `json:"workNonce"`
-		ContractAddress   *common.Address `json:"contractAddress"`
-		Input             string          `json:"input"`
+		Hash               common.Hash     `json:"hash"`
+		Timestamp          uint64          `json:"timestamp"`
+		Status             uint64          `json:"status"`
+		Nonce              uint64          `json:"nonce"`
+		BlockHash          common.Hash     `json:"blockHash"`
+		BlockNumber        uint64          `json:"blockNumber"`
+		TransactionIndex   uint64          `json:"transactionIndex"`
+		From               common.Address  `json:"from"`
+		FromEns            *string         `json:"fromEns"`
+		To                 *common.Address `json:"to"`
+		ToEns              *string         `json:"toEns"`
+		Value              *big.Int        `json:"value"`
+		GasUsed            uint64          `json:"gasUsed"`
+		CumulativeGasUsed  uint64          `json:"cumulativeGasUsed"`
+		GasLimit           uint64          `json:"gasLimit"`
+		GasPrice           uint64          `json:"gasPrice"`
+		WorkNonce          uint64          `json:"workNonce"`
+		ContractAddress    *common.Address `json:"contractAddress"`
+		ContractAddressEns *string         `json:"contractAddressEns"`
+		Input              string          `json:"input"`
 	}
 
 	t := tf.Tx
@@ -210,7 +219,9 @@ func (tf TransactionFull) MarshalJSON() ([]byte, error) {
 	enc.BlockNumber = uint64(t.BlockNumber)
 	enc.TransactionIndex = uint64(t.TransactionIndex)
 	enc.From = t.From
+	enc.FromEns = t.FromEns
 	enc.To = t.To
+	enc.ToEns = t.ToEns
 	enc.Value = t.Value.ToInt()
 	enc.GasUsed = uint64(r.GasUsed)
 	enc.CumulativeGasUsed = uint64(r.CumulativeGasUsed)
@@ -218,6 +229,7 @@ func (tf TransactionFull) MarshalJSON() ([]byte, error) {
 	enc.GasPrice = uint64(t.GasPrice)
 	enc.WorkNonce = uint64(t.WorkNonce)
 	enc.ContractAddress = r.ContractAddress
+	enc.ContractAddressEns = r.ContractAddressEns
 	enc.Input = "0x" + hex.EncodeToString(t.Input)
 
 	return json.Marshal(&enc)
@@ -225,6 +237,7 @@ func (tf TransactionFull) MarshalJSON() ([]byte, error) {
 
 type AddressResult struct {
 	Address      common.Address `json:"address"`
+	AddressEns   *string        `json:"addressEns"`
 	Balance      *big.Int       `json:"balance"`
 	Stake        uint64         `json:"stake"`
 	TxCount      uint64         `json:"tx_count"`
@@ -247,12 +260,13 @@ type DelegateVoteInfo struct {
 
 type Balance struct {
 	Address     common.Address `json:"address"`
+	AddressEns  string         `json:"addressEns"`
 	Amount      uint64         `json:"amount"`
 	BlockNumber uint64         `json:"block_number"`
 }
 
 func (b Balance) MarshalJSON() ([]byte, error) {
-	return []byte(fmt.Sprintf(`{"address":"0x%s","amount":%.4f}`, common.Bytes2Hex(b.Address[:]), float32(b.Amount)/10000.0)), nil
+	return []byte(fmt.Sprintf(`{"address":"0x%s","addressEns":"%s","amount":%.4f}`, common.Bytes2Hex(b.Address[:]), b.AddressEns, float32(b.Amount)/10000.0)), nil
 }
 
 type ENS struct {
