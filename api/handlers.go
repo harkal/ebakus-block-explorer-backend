@@ -270,6 +270,10 @@ func HandleAddress(w http.ResponseWriter, r *http.Request) {
 		BlockRewards: blockRewards,
 	}
 
+	if addressEns, err := dbc.GetEnsName(addressHex); err == nil {
+		result.AddressEns = &addressEns
+	}
+
 	res, err := json.Marshal(result)
 
 	if err != nil {
