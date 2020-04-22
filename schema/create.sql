@@ -51,6 +51,14 @@ CREATE TABLE balances (
 
 CREATE INDEX bl_amount_idx ON balances USING btree (amount);
 
+CREATE TABLE ens (
+  address bytea PRIMARY KEY,
+  hash bytea,
+  name VARCHAR(64)
+);
+
+CREATE INDEX ens_name_idx ON ens USING btree (name);
+
 CREATE TABLE globals (
   var_name CHAR(64) PRIMARY KEY,
   value_int BIGINT,

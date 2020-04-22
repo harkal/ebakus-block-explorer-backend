@@ -104,6 +104,9 @@ func (ec explorerContext) startServer() cli.ActionFunc {
 
 		ec.router.HandleFunc("/rich-list", api.HandleRichList).Methods("GET")
 
+		ec.router.HandleFunc("/ens", api.HandleAddReverseRegistrar).Methods("POST")
+		ec.router.HandleFunc("/ens/{address}", api.HandleGetReverseRegistrar).Methods("GET")
+
 		ec.router.HandleFunc("/delegates", api.HandleDelegates).Methods("GET")
 		ec.router.HandleFunc("/delegates/{number}", api.HandleDelegates).Methods("GET")
 

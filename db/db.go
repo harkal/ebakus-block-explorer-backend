@@ -150,7 +150,11 @@ func (cli *DBClient) GetLatestBlockNumber() (uint64, error) {
 
 // GetBlockByID finds and returns the block with the provided ID
 func (cli *DBClient) GetBlockByID(number uint64) (*models.Block, error) {
-	rows, err := cli.db.Query("SELECT * FROM blocks WHERE number = $1", number)
+	query := strings.Join([]string{
+		"SELECT b.*, ens.name FROM blocks AS b",
+		" LEFT JOIN ens ON ens.address = b.producer",
+		" WHERE b.number = $1"}, "")
+	rows, err := cli.db.Query(query, number)
 	if err != nil {
 		return nil, err
 	}
@@ -173,7 +177,8 @@ func (cli *DBClient) GetBlockByID(number uint64) (*models.Block, error) {
 		&block.GasLimit,
 		&delegatesRaw,
 		&producer,
-		&block.Signature)
+		&block.Signature,
+		&block.ProducerEns)
 	if err = rows.Err(); err != nil {
 		return nil, err
 	}
@@ -207,7 +212,10 @@ func (cli *DBClient) GetBlockByHash(hash string) (*models.Block, error) {
 	// Query for bytea value with the hex method, pass from char [1,end) since
 	// the required structure is E'\\xDEADBEEF'
 	// For more, check https://www.postgresql.org/docs/9.0/static/datatype-binary.html
-	query := strings.Join([]string{"SELECT * FROM blocks WHERE hash = E'\\\\", hash[1:], "'"}, "")
+	query := strings.Join([]string{
+		"SELECT b.*, ens.name FROM blocks AS b",
+		" LEFT JOIN ens ON ens.address = b.producer",
+		" WHERE b.hash = E'\\\\", hash[1:], "'"}, "")
 	rows, err := cli.db.Query(query)
 
 	if err != nil {
@@ -232,7 +240,8 @@ func (cli *DBClient) GetBlockByHash(hash string) (*models.Block, error) {
 		&block.GasLimit,
 		&delegatesRaw,
 		&producer,
-		&block.Signature)
+		&block.Signature,
+		&block.ProducerEns)
 	if err = rows.Err(); err != nil {
 		return nil, err
 	}
@@ -264,7 +273,12 @@ func (cli *DBClient) GetBlockByHash(hash string) (*models.Block, error) {
 
 // GetBlockByID finds and returns the block with the provided ID
 func (cli *DBClient) GetBlockRange(fromNumber, rng uint32) ([]models.Block, error) {
-	rows, err := cli.db.Query("SELECT * FROM blocks WHERE number <= $1 order by number desc limit $2", fromNumber, rng)
+	query := strings.Join([]string{
+		"SELECT b.*, ens.name FROM blocks AS b",
+		" LEFT JOIN ens ON ens.address = b.producer",
+		" WHERE b.number <= $1",
+		" ORDER BY b.number DESC LIMIT $2"}, "")
+	rows, err := cli.db.Query(query, fromNumber, rng)
 	if err != nil {
 		return nil, err
 	}
@@ -287,7 +301,8 @@ func (cli *DBClient) GetBlockRange(fromNumber, rng uint32) ([]models.Block, erro
 			&block.GasLimit,
 			&delegatesRaw,
 			&producer,
-			&block.Signature)
+			&block.Signature,
+			&block.ProducerEns)
 		if err = rows.Err(); err != nil {
 			return nil, err
 		}
@@ -320,22 +335,24 @@ func (cli *DBClient) GetBlocksByTimestamp(timestamp hexutil.Uint64, timestampCon
 	// Query for bytea value with the hex method, pass from char [1,end) since
 	// the required structure is E'\\xDEADBEEF'
 	// For more, check https://www.postgresql.org/docs/9.0/static/datatype-binary.html
-	query := "SELECT * FROM blocks"
+	query := strings.Join([]string{
+		"SELECT b.*, ens.name FROM blocks AS b",
+		" LEFT JOIN ens ON ens.address = b.producer"}, "")
 
 	switch timestampCondition {
 	case models.TIMESTAMP_EQUAL:
-		query = strings.Join([]string{query, " WHERE timestamp = $1"}, "")
+		query = strings.Join([]string{query, " WHERE b.timestamp = $1"}, "")
 	case models.TIMESTAMP_GREATER_EQUAL_THAN:
-		query = strings.Join([]string{query, " WHERE timestamp >= $1"}, "")
+		query = strings.Join([]string{query, " WHERE b.timestamp >= $1"}, "")
 	case models.TIMESTAMP_SMALLER_EQUAL_THAN:
-		query = strings.Join([]string{query, " WHERE timestamp <= $1"}, "")
+		query = strings.Join([]string{query, " WHERE b.timestamp <= $1"}, "")
 	}
 
 	if common.IsHexAddress(producer) {
-		query = strings.Join([]string{query, " AND producer = E'\\\\", producer[1:], "'"}, "")
+		query = strings.Join([]string{query, " AND b.producer = E'\\\\", producer[1:], "'"}, "")
 	}
 
-	query = strings.Join([]string{query, " ORDER BY timestamp DESC"}, "")
+	query = strings.Join([]string{query, " ORDER BY b.timestamp DESC"}, "")
 
 	rows, err := cli.db.Query(query, timestamp)
 	if err != nil {
@@ -360,7 +377,8 @@ func (cli *DBClient) GetBlocksByTimestamp(timestamp hexutil.Uint64, timestampCon
 			&block.GasLimit,
 			&delegatesRaw,
 			&producer,
-			&block.Signature)
+			&block.Signature,
+			&block.ProducerEns)
 		if err = rows.Err(); err != nil {
 			return nil, err
 		}
@@ -393,7 +411,12 @@ func (cli *DBClient) GetTransactionByHash(hash string) (*models.TransactionFull,
 	// Query for bytea value with the hex method, pass from char [1,end) since
 	// the required structure is E'\\xDEADBEEF'
 	// For more, check https://www.postgresql.org/docs/9.0/static/datatype-binary.html
-	query := strings.Join([]string{"SELECT * FROM transactions WHERE hash = E'\\\\", hash[1:], "'"}, "")
+	query := strings.Join([]string{
+		"SELECT t.*, ensf.name, enst.name, ensc.name FROM transactions AS t",
+		" LEFT JOIN ens AS ensf ON ensf.address = t.addr_from",
+		" LEFT JOIN ens AS enst ON enst.address = t.addr_to",
+		" LEFT JOIN ens AS ensc ON ensc.address = t.contract_address",
+		" WHERE t.hash = E'\\\\", hash[1:], "'"}, "")
 	rows, err := cli.db.Query(query)
 
 	if err != nil {
@@ -427,7 +450,10 @@ func (cli *DBClient) GetTransactionByHash(hash string) (*models.TransactionFull,
 		&input,
 		&txr.Status,
 		&tx.WorkNonce,
-		&tx.Timestamp)
+		&tx.Timestamp,
+		&tx.FromEns,
+		&tx.ToEns,
+		&txr.ContractAddressEns)
 	if err = rows.Err(); err != nil {
 		return nil, err
 	}
@@ -528,25 +554,36 @@ func (cli *DBClient) GetTransactionsByAddress(address string, addrtype models.Ad
 	// Query for bytea value with the hex method, pass from char [1,end) since
 	// the required structure is E'\\xDEADBEEF'
 	// For more, check https://www.postgresql.org/docs/9.0/static/datatype-binary.html
-	query := "SELECT * FROM transactions"
+	query := strings.Join([]string{
+		"SELECT t.*, ensf.name, enst.name, ensc.name FROM transactions AS t",
+		" LEFT JOIN ens AS ensf ON ensf.address = t.addr_from",
+		" LEFT JOIN ens AS enst ON enst.address = t.addr_to",
+		" LEFT JOIN ens AS ensc ON ensc.address = t.contract_address"}, "")
 
 	switch addrtype {
 	case models.ADDRESS_TO:
-		query = strings.Join([]string{query, " WHERE addr_to = E'\\\\", address[1:], "'"}, "")
+		query = strings.Join([]string{query, " WHERE t.addr_to = E'\\\\", address[1:], "'"}, "")
 	case models.ADDRESS_FROM:
-		query = strings.Join([]string{query, " WHERE addr_from = E'\\\\", address[1:], "'"}, "")
+		query = strings.Join([]string{query, " WHERE t.addr_from = E'\\\\", address[1:], "'"}, "")
 	case models.ADDRESS_ALL:
-		query = strings.Join([]string{query, " WHERE addr_to = E'\\\\", address[1:], "'", " or addr_from = E'\\\\", address[1:], "'"}, "")
+		query = strings.Join([]string{query, " WHERE t.addr_to = E'\\\\", address[1:], "'", " or t.addr_from = E'\\\\", address[1:], "'"}, "")
 	case models.ADDRESS_BLOCKHASH:
-		query = strings.Join([]string{"SELECT transactions.* FROM transactions, blocks WHERE blocks.number =  transactions.block_number AND blocks.hash = E'\\\\", address[1:], "'"}, "")
+		query = strings.Join([]string{
+			"SELECT t.*, ensf.name, enst.name, ensc.name",
+			" FROM transactions AS t",
+			" INNER JOIN blocks AS b ON b.number = t.block_number",
+			" LEFT JOIN ens AS ensf ON ensf.address = t.addr_from",
+			" LEFT JOIN ens AS enst ON enst.address = t.addr_to",
+			" LEFT JOIN ens AS ensc ON ensc.address = t.contract_address",
+			" WHERE b.hash = E'\\\\", address[1:], "'"}, "")
 	}
 
 	if order != "asc" {
 		switch addrtype {
 		case models.LATEST:
-			query = strings.Join([]string{query, " ORDER BY block_number ", order}, "")
+			query = strings.Join([]string{query, " ORDER BY t.block_number ", order}, "")
 		default:
-			query = strings.Join([]string{query, " ORDER BY timestamp ", order}, "")
+			query = strings.Join([]string{query, " ORDER BY t.timestamp ", order}, "")
 		}
 	}
 
@@ -586,7 +623,10 @@ func (cli *DBClient) GetTransactionsByAddress(address string, addrtype models.Ad
 			&input,
 			&txr.Status,
 			&tx.WorkNonce,
-			&tx.Timestamp)
+			&tx.Timestamp,
+			&tx.FromEns,
+			&tx.ToEns,
+			&txr.ContractAddressEns)
 		if err = rows.Err(); err != nil {
 			log.Println(err)
 			return nil, err
@@ -793,8 +833,8 @@ func (cli *DBClient) InsertBlocks(blocks []*models.Block) error {
 func (cli *DBClient) InsertBalance(address common.Address, balance uint64, blockNumber uint64) error {
 	sql := `
 		INSERT INTO balances(address, amount, block_number) VALUES (E'\\x%s', %d, %d)
-		ON CONFLICT (address) DO UPDATE 
-  			SET amount = excluded.amount, block_number = excluded.block_number
+		ON CONFLICT (address) DO UPDATE
+			SET amount = excluded.amount, block_number = excluded.block_number
 	`
 	adr := common.Bytes2Hex(address[:])[:]
 	//	log.Println(fmt.Sprintf(sql, adr, balance, blockNumber))
@@ -818,8 +858,11 @@ func (cli *DBClient) GetBalanceStats() (uint64, uint64, uint64, error) {
 
 // GetTopBalances gets the rich list
 func (cli *DBClient) GetTopBalances(limit uint64, offset uint64) ([]models.Balance, error) {
-
-	query := "SELECT address, amount, block_number FROM balances ORDER BY amount DESC LIMIT $1 OFFSET $2"
+	query := strings.Join([]string{
+		"SELECT b.address, b.amount, b.block_number, ens.name",
+		" FROM balances AS b",
+		" LEFT JOIN ens ON ens.address = b.address",
+		" ORDER BY b.amount DESC LIMIT $1 OFFSET $2"}, "")
 	rows, err := cli.db.Query(query, limit, offset)
 
 	if err != nil {
@@ -831,10 +874,11 @@ func (cli *DBClient) GetTopBalances(limit uint64, offset uint64) ([]models.Balan
 
 	for rows.Next() {
 		var addressBytes []byte
+		var addressEns string
 		var amount uint64
 		var blockNumber uint64
 
-		rows.Scan(&addressBytes, &amount, &blockNumber)
+		rows.Scan(&addressBytes, &amount, &blockNumber, &addressEns)
 		if err = rows.Err(); err != nil {
 			log.Println(err)
 			return nil, err
@@ -842,7 +886,7 @@ func (cli *DBClient) GetTopBalances(limit uint64, offset uint64) ([]models.Balan
 
 		address := common.BytesToAddress(addressBytes)
 
-		result = append(result, models.Balance{Address: address, Amount: amount, BlockNumber: blockNumber})
+		result = append(result, models.Balance{Address: address, AddressEns: addressEns, Amount: amount, BlockNumber: blockNumber})
 	}
 
 	return result, nil
@@ -880,4 +924,27 @@ func (cli *DBClient) SetGlobalInt(varName string, valInt uint64) error {
 	rows.Close()
 
 	return err
+}
+
+// InsertEns inserts/updates the address for a namehash
+func (cli *DBClient) InsertEns(ens models.ENS) error {
+	sql := `
+		INSERT INTO ens(address, hash, name) VALUES (E'\\x%s', E'\\x%s', '%s')
+		ON CONFLICT (address) DO UPDATE SET hash = excluded.hash, name = excluded.name
+	`
+	adr := common.Bytes2Hex(ens.Address[:])[:]
+	namehash := common.Bytes2Hex(ens.Hash[:])[:]
+	rows, err := cli.db.Query(fmt.Sprintf(sql, adr, namehash, ens.Name))
+	rows.Close()
+
+	return err
+}
+
+// GetEnsName gets the table stats
+func (cli *DBClient) GetEnsName(address string) (string, error) {
+	query := strings.Join([]string{"SELECT name FROM ens WHERE address = E'\\\\", address[1:], "'"}, "")
+	var name string
+	rows := cli.db.QueryRow(query)
+	err := rows.Scan(&name)
+	return name, err
 }
