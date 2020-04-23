@@ -60,6 +60,10 @@ func (ec explorerContext) initExplorer() cli.BeforeFunc {
 		}
 		redis.CleanupHook()
 
+		if err := api.InitCoinmarketcapDefaultsFromCli(c); err != nil {
+			log.Println(err)
+		}
+
 		return nil
 	}
 }
@@ -209,6 +213,10 @@ func main() {
 		altsrc.NewIntFlag(cli.IntFlag{
 			Name:  "redisdbselect",
 			Value: 0,
+		}),
+		altsrc.NewStringFlag(cli.StringFlag{
+			Name:  "coinmarketcapapikey",
+			Value: "",
 		}),
 		cli.StringFlag{
 			Name:  "config",

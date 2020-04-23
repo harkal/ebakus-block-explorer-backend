@@ -14,3 +14,5 @@ redispoolsize: 10
 redisdbselect: 0
 
 threads: 8
+
+# coinmarketcapapikey: API_KEY
