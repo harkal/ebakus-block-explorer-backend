@@ -818,14 +818,7 @@ func HandleGetConversionRate(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	// TODO: implement API call
-
-	res := make(map[string]interface{})
-	res["currency"] = currency
-	res["rate"] = 0
-
-	out, err := json.Marshal(res)
-
+	out, err := GetLatestUSDConversionRate()
 	if err != nil {
 		log.Printf("! Error: %s", err.Error())
 		http.Error(w, "error", http.StatusInternalServerError)
