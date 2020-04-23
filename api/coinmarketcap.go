@@ -43,7 +43,7 @@ type PriceConversion struct {
 }
 
 func (p PriceConversion) MarshalJSON() ([]byte, error) {
-	return []byte(fmt.Sprintf(`{"currency":"%s","usd_rate":"%f"}`, p.Data.Symbol, p.Data.Quote.USD.Price)), nil
+	return []byte(fmt.Sprintf(`{"currency":"%s","usd_rate":%f}`, p.Data.Symbol, p.Data.Quote.USD.Price)), nil
 }
 
 func GetLatestUSDConversionRate() ([]byte, error) {
