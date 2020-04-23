@@ -114,6 +114,8 @@ func (ec explorerContext) startServer() cli.ActionFunc {
 
 		ec.router.HandleFunc("/chain-info", api.HandleChainInfo).Methods("GET")
 
+		ec.router.HandleFunc("/conversion-rate", api.HandleGetConversionRate).Methods("GET")
+
 		handler := cors.Default().Handler(ec.router)
 		err = http.ListenAndServe(buff.String(), handler)
 

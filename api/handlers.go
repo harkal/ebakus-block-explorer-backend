@@ -800,3 +800,7 @@ func HandleGetReverseRegistrar(w http.ResponseWriter, r *http.Request) {
 		w.Write(out)
 	}
 }
+
+// HandleGetConversionRate returns the rate for a currency
+func HandleGetConversionRate(w http.ResponseWriter, r *http.Request) {
+}
