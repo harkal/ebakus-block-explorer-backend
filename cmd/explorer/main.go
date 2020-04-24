@@ -60,6 +60,10 @@ func (ec explorerContext) initExplorer() cli.BeforeFunc {
 		}
 		redis.CleanupHook()
 
+		if err := api.InitCoinmarketcapDefaultsFromCli(c); err != nil {
+			log.Println(err)
+		}
+
 		return nil
 	}
 }
@@ -113,6 +117,8 @@ func (ec explorerContext) startServer() cli.ActionFunc {
 		ec.router.HandleFunc("/abi/{address}", api.HandleABI).Methods("GET")
 
 		ec.router.HandleFunc("/chain-info", api.HandleChainInfo).Methods("GET")
+
+		ec.router.HandleFunc("/conversion-rate", api.HandleGetConversionRate).Methods("GET")
 
 		handler := cors.Default().Handler(ec.router)
 		err = http.ListenAndServe(buff.String(), handler)
@@ -207,6 +213,10 @@ func main() {
 		altsrc.NewIntFlag(cli.IntFlag{
 			Name:  "redisdbselect",
 			Value: 0,
+		}),
+		altsrc.NewStringFlag(cli.StringFlag{
+			Name:  "coinmarketcapapikey",
+			Value: "",
 		}),
 		cli.StringFlag{
 			Name:  "config",

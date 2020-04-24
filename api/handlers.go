@@ -800,3 +800,31 @@ func HandleGetReverseRegistrar(w http.ResponseWriter, r *http.Request) {
 		w.Write(out)
 	}
 }
+
+// HandleGetConversionRate returns the rate for a currency
+func HandleGetConversionRate(w http.ResponseWriter, r *http.Request) {
+	if r.Method != "GET" {
+		http.Error(w, "error", http.StatusBadRequest)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+
+	redisKey := "rates:EBK"
+	if ok, _ := redis.Exists(redisKey); ok {
+		if res, err := redis.Get(redisKey); err == nil {
+			w.Write(res)
+			return
+		}
+	}
+
+	out, err := GetLatestUSDConversionRate()
+	if err != nil {
+		log.Printf("! Error: %s", err.Error())
+		http.Error(w, "error", http.StatusInternalServerError)
+	} else {
+		redis.Set(redisKey, out)
+		redis.Expire(redisKey, 10) // 10 seconds
+		w.Write(out)
+	}
+}
