@@ -367,6 +367,10 @@ func pullNewBlocks(c *cli.Context) error {
 	return err
 }
 
+func doEnsSync(c *cli.Context) error {
+	return nil
+}
+
 func main() {
 	app := cli.NewApp()
 	app.Name = "Ebakus Blockchain Explorer"
@@ -460,6 +464,14 @@ func main() {
 			Before:  altsrc.InitInputSourceWithContext(genericFlags, altsrc.NewYamlSourceFromFlagFunc("config")),
 			Flags:   genericFlags,
 			Action:  doRichlist,
+		},
+		{
+			Name:    "enssync",
+			Aliases: []string{"ens"},
+			Usage:   "ENS names will sync up its address",
+			Before:  altsrc.InitInputSourceWithContext(genericFlags, altsrc.NewYamlSourceFromFlagFunc("config")),
+			Flags:   genericFlags,
+			Action:  doEnsSync,
 		},
 	}
 
