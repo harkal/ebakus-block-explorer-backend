@@ -15,4 +15,6 @@ redisdbselect: 0
 
 threads: 8
 
+# enscontractaddress: CONTRACT_ADDRESS
+
 # coinmarketcapapikey: API_KEY

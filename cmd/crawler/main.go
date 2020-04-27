@@ -434,6 +434,10 @@ func main() {
 			Name:  "redisdbselect",
 			Value: 0,
 		}),
+		altsrc.NewStringFlag(cli.StringFlag{
+			Name:  "enscontractaddress",
+			Value: "",
+		}),
 		cli.StringFlag{
 			Name:  "config",
 			Value: "config.yaml",
