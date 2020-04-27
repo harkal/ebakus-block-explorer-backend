@@ -271,7 +271,7 @@ func (cli *DBClient) GetBlockByHash(hash string) (*models.Block, error) {
 	return &block, nil
 }
 
-// GetBlockByID finds and returns the block with the provided ID
+// GetBlockRange returns range of blocks
 func (cli *DBClient) GetBlockRange(fromNumber, rng uint32) ([]models.Block, error) {
 	query := strings.Join([]string{
 		"SELECT b.*, ens.name FROM blocks AS b",
@@ -929,18 +929,18 @@ func (cli *DBClient) SetGlobalInt(varName string, valInt uint64) error {
 // InsertEns inserts/updates the address for a namehash
 func (cli *DBClient) InsertEns(ens models.ENS) error {
 	sql := `
-		INSERT INTO ens(address, hash, name) VALUES (E'\\x%s', E'\\x%s', '%s')
-		ON CONFLICT (address) DO UPDATE SET hash = excluded.hash, name = excluded.name
+		INSERT INTO ens(hash, address, name) VALUES (E'\\x%s', E'\\x%s', '%s')
+		ON CONFLICT (hash) DO UPDATE SET address = excluded.address, name = excluded.name
 	`
 	adr := common.Bytes2Hex(ens.Address[:])[:]
 	namehash := common.Bytes2Hex(ens.Hash[:])[:]
-	rows, err := cli.db.Query(fmt.Sprintf(sql, adr, namehash, ens.Name))
+	rows, err := cli.db.Query(fmt.Sprintf(sql, namehash, adr, ens.Name))
 	rows.Close()
 
 	return err
 }
 
-// GetEnsName gets the table stats
+// GetEnsName gets the ENS name for an address
 func (cli *DBClient) GetEnsName(address string) (string, error) {
 	query := strings.Join([]string{"SELECT name FROM ens WHERE address = E'\\\\", address[1:], "'"}, "")
 	var name string
