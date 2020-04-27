@@ -948,3 +948,48 @@ func (cli *DBClient) GetEnsName(address string) (string, error) {
 	err := rows.Scan(&name)
 	return name, err
 }
+
+// GetEnsCount gets the count of ENS entries
+func (cli *DBClient) GetEnsCount() (uint64, error) {
+	query := `SELECT count(*) FROM ens`
+	var count uint64
+	err := cli.db.QueryRow(query).Scan(&count)
+	if err != nil {
+		return 0, err
+	}
+
+	return count, nil
+}
+
+// GetEnsEntries gets range of entries
+func (cli *DBClient) GetEnsEntriesRange(limit uint64, offset uint64) ([]models.ENS, error) {
+	if limit == 0 {
+		limit = 20
+	}
+
+	query := "SELECT * FROM ens LIMIT $1 OFFSET $2"
+	rows, err := cli.db.Query(query, limit, offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var result []models.ENS
+
+	for rows.Next() {
+		var ens models.ENS
+		var address, hash []byte
+
+		rows.Scan(&hash, &address, &ens.Name)
+		if err = rows.Err(); err != nil {
+			return nil, err
+		}
+
+		ens.Hash.SetBytes(hash)
+		ens.Address.SetBytes(address)
+
+		result = append(result, ens)
+	}
+
+	return result, nil
+}
