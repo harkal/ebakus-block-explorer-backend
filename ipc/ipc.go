@@ -8,6 +8,7 @@ import (
 
 	"github.com/ebakus/ebakus-block-explorer-backend/db"
 	"github.com/ebakus/ebakus-block-explorer-backend/models"
+	"golang.org/x/crypto/sha3"
 
 	"github.com/ebakus/go-ebakus/common"
 
@@ -227,4 +228,25 @@ func (ipc *IPCInterface) GetABIForContract(address common.Address) (string, erro
 	}
 
 	return abi, nil
+}
+
+func (ipc *IPCInterface) GetENSAddress(contractAddress common.Address, hash common.Hash) (common.Address, error) {
+	keyBytesPadded := common.LeftPadBytes(hash.Bytes(), 32)
+
+	// pos of _lookupOwner mapping in contract
+	posIndex := common.LeftPadBytes([]byte{5}, 32)
+
+	keyBytes := sha3.NewLegacyKeccak256()
+	keyBytes.Write(append(keyBytesPadded, posIndex...))
+
+	key := common.ToHex(keyBytes.Sum(nil))
+
+	var res common.Hash
+	err := ipc.cli.Call(&res, "eth_getStorageAt", contractAddress, key, "latest")
+	if err != nil {
+		return common.Address{}, err
+	}
+
+	addr := common.BytesToAddress(res.Bytes())
+	return addr, nil
 }
