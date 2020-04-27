@@ -367,6 +367,87 @@ func pullNewBlocks(c *cli.Context) error {
 	return err
 }
 
+func doEnsSync(c *cli.Context) error {
+	lock, err := lockfile.New(filepath.Join(os.TempDir(), "ebakus-crawler-enssync-"+c.String("dbname")+".lock"))
+	if err != nil {
+		fmt.Printf("Cannot init lock. reason: %v", err)
+		return err
+	}
+	err = lock.TryLock()
+	if err != nil {
+		fmt.Printf("Cannot lock %q, reason: %v", lock, err)
+		return err
+	}
+	defer lock.Unlock()
+
+	ipcFile := expandHome(c.String("ipc"))
+	ipc, err := ipcModule.NewIPCInterface(ipcFile)
+	if err != nil {
+		log.Fatal("Failed to connect to ebakus", err)
+	}
+
+	err = db.InitFromCli(c)
+	if err != nil {
+		log.Fatal("Failed to load db client")
+	}
+	db := db.GetClient()
+
+	ensContractAddress := common.HexToAddress(c.String("enscontractaddress"))
+	zeroAddress := common.Address{}
+	if ensContractAddress == zeroAddress {
+		log.Fatal("No contract address defined for the ENS contract")
+	}
+
+	log.Printf("Going to sync up ENS names with its addresses")
+
+	stime := time.Now()
+
+	numberOfEntries, err := db.GetEnsCount()
+	if err != nil {
+		log.Fatal("Failed to get number of ENS entries in DB", err.Error())
+	}
+	if numberOfEntries == 0 {
+		log.Println("No ENS entries to process")
+		return nil
+	}
+
+	updatedEntries := 0
+	const chunkSize = 100
+
+	for i := uint64(0); i < numberOfEntries; i += chunkSize {
+		entries, err := db.GetEnsEntriesRange(chunkSize, i)
+		if err != nil {
+			log.Fatal("Failed to get ENS entries from DB", err.Error())
+			return err
+		}
+
+		for _, ens := range entries {
+			addr, err := ipc.GetENSAddress(ensContractAddress, ens.Hash)
+			if err != nil {
+				log.Println("Failed to get ENS address from node state:", err.Error())
+				continue
+			}
+
+			if ens.Address == addr {
+				continue
+			}
+
+			ens.Address = addr
+			updatedEntries++
+
+			err = db.InsertEns(ens)
+			if err != nil {
+				log.Fatal("Error InsertEns failed", err.Error())
+			}
+		}
+	}
+
+	elapsed := time.Now().Sub(stime)
+	log.Printf("Updated %d of %d names in %.3f (%.0f bps)", updatedEntries, numberOfEntries, elapsed.Seconds(), float64(numberOfEntries)/elapsed.Seconds())
+
+	return nil
+}
+
 func main() {
 	app := cli.NewApp()
 	app.Name = "Ebakus Blockchain Explorer"
@@ -430,6 +511,10 @@ func main() {
 			Name:  "redisdbselect",
 			Value: 0,
 		}),
+		altsrc.NewStringFlag(cli.StringFlag{
+			Name:  "enscontractaddress",
+			Value: "",
+		}),
 		cli.StringFlag{
 			Name:  "config",
 			Value: "config.yaml",
@@ -460,6 +545,14 @@ func main() {
 			Before:  altsrc.InitInputSourceWithContext(genericFlags, altsrc.NewYamlSourceFromFlagFunc("config")),
 			Flags:   genericFlags,
 			Action:  doRichlist,
+		},
+		{
+			Name:    "enssync",
+			Aliases: []string{"ens"},
+			Usage:   "ENS names will sync up its address",
+			Before:  altsrc.InitInputSourceWithContext(genericFlags, altsrc.NewYamlSourceFromFlagFunc("config")),
+			Flags:   genericFlags,
+			Action:  doEnsSync,
 		},
 	}
 

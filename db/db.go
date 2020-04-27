@@ -271,7 +271,7 @@ func (cli *DBClient) GetBlockByHash(hash string) (*models.Block, error) {
 	return &block, nil
 }
 
-// GetBlockByID finds and returns the block with the provided ID
+// GetBlockRange returns range of blocks
 func (cli *DBClient) GetBlockRange(fromNumber, rng uint32) ([]models.Block, error) {
 	query := strings.Join([]string{
 		"SELECT b.*, ens.name FROM blocks AS b",
@@ -929,22 +929,67 @@ func (cli *DBClient) SetGlobalInt(varName string, valInt uint64) error {
 // InsertEns inserts/updates the address for a namehash
 func (cli *DBClient) InsertEns(ens models.ENS) error {
 	sql := `
-		INSERT INTO ens(address, hash, name) VALUES (E'\\x%s', E'\\x%s', '%s')
-		ON CONFLICT (address) DO UPDATE SET hash = excluded.hash, name = excluded.name
+		INSERT INTO ens(hash, address, name) VALUES (E'\\x%s', E'\\x%s', '%s')
+		ON CONFLICT (hash) DO UPDATE SET address = excluded.address, name = excluded.name
 	`
 	adr := common.Bytes2Hex(ens.Address[:])[:]
 	namehash := common.Bytes2Hex(ens.Hash[:])[:]
-	rows, err := cli.db.Query(fmt.Sprintf(sql, adr, namehash, ens.Name))
+	rows, err := cli.db.Query(fmt.Sprintf(sql, namehash, adr, ens.Name))
 	rows.Close()
 
 	return err
 }
 
-// GetEnsName gets the table stats
+// GetEnsName gets the ENS name for an address
 func (cli *DBClient) GetEnsName(address string) (string, error) {
 	query := strings.Join([]string{"SELECT name FROM ens WHERE address = E'\\\\", address[1:], "'"}, "")
 	var name string
 	rows := cli.db.QueryRow(query)
 	err := rows.Scan(&name)
 	return name, err
+}
+
+// GetEnsCount gets the count of ENS entries
+func (cli *DBClient) GetEnsCount() (uint64, error) {
+	query := `SELECT count(*) FROM ens`
+	var count uint64
+	err := cli.db.QueryRow(query).Scan(&count)
+	if err != nil {
+		return 0, err
+	}
+
+	return count, nil
+}
+
+// GetEnsEntries gets range of entries
+func (cli *DBClient) GetEnsEntriesRange(limit uint64, offset uint64) ([]models.ENS, error) {
+	if limit == 0 {
+		limit = 20
+	}
+
+	query := "SELECT * FROM ens LIMIT $1 OFFSET $2"
+	rows, err := cli.db.Query(query, limit, offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var result []models.ENS
+
+	for rows.Next() {
+		var ens models.ENS
+		var address, hash []byte
+
+		rows.Scan(&hash, &address, &ens.Name)
+		if err = rows.Err(); err != nil {
+			return nil, err
+		}
+
+		ens.Hash.SetBytes(hash)
+		ens.Address.SetBytes(address)
+
+		result = append(result, ens)
+	}
+
+	return result, nil
 }
