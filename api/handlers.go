@@ -824,7 +824,7 @@ func HandleGetConversionRate(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "error", http.StatusInternalServerError)
 	} else {
 		redis.Set(redisKey, out)
-		redis.Expire(redisKey, 10) // 10 seconds
+		redis.Expire(redisKey, 60*60) // 1 hour
 		w.Write(out)
 	}
 }
