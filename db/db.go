@@ -550,6 +550,11 @@ func (cli *DBClient) GetAddressTotals(address string) (blockRewards *big.Int, tx
 
 // GetIsContractAddress checks if an address is a contract
 func (cli *DBClient) GetIsContractAddress(address string) (bool, error) {
+	// return true for system contracts
+	if bytes.Compare(common.HexToAddress(address).Bytes(), []byte{1, 2}) <= 0 {
+		return true, nil
+	}
+
 	query := strings.Join([]string{"SELECT count(*) FROM transactions WHERE contract_address = E'\\\\", address[1:], "'"}, "")
 	varInt := uint64(0)
 	cli.db.QueryRow(query).Scan(&varInt)
