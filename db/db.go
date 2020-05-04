@@ -548,6 +548,14 @@ func (cli *DBClient) GetAddressTotals(address string) (blockRewards *big.Int, tx
 	return
 }
 
+// GetIsContractAddress checks if an address is a contract
+func (cli *DBClient) GetIsContractAddress(address string) (bool, error) {
+	query := strings.Join([]string{"SELECT count(*) FROM transactions WHERE contract_address = E'\\\\", address[1:], "'"}, "")
+	varInt := uint64(0)
+	cli.db.QueryRow(query).Scan(&varInt)
+	return varInt > 0, nil
+}
+
 // GetTransactionByAddress finds and returns the transaction with the provided address
 // as source (FROM) or destination (TO), or the transactions of a block
 func (cli *DBClient) GetTransactionsByAddress(address string, addrtype models.AddressType, offset, limit uint64, order string) ([]models.TransactionFull, error) {

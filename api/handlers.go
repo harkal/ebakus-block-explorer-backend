@@ -259,11 +259,13 @@ func HandleAddress(w http.ResponseWriter, r *http.Request) {
 	}
 
 	blockRewards, txCount, err := dbc.GetAddressTotals(addressHex)
+	isContract, err := dbc.GetIsContractAddress(addressHex)
 	balance, err := ipc.GetAddressBalance(address)
 	stake, err := ipc.GetAddressStaked(address)
 
 	result := models.AddressResult{
 		Address:      address,
+		IsContract:   isContract,
 		Balance:      balance,
 		Stake:        stake,
 		TxCount:      txCount,
