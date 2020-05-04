@@ -222,7 +222,7 @@ func (ipc *IPCInterface) GetAddressStaked(address common.Address) (uint64, error
 func (ipc *IPCInterface) GetABIForContract(address common.Address) (string, error) {
 	var abi string
 
-	err := ipc.cli.Call(&abi, "eth_getABIForContract", address)
+	err := ipc.cli.Call(&abi, "eth_getAbiForAddress", address)
 	if err != nil {
 		return "", err
 	}
