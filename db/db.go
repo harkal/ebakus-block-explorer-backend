@@ -151,8 +151,10 @@ func (cli *DBClient) GetLatestBlockNumber() (uint64, error) {
 // GetBlockByID finds and returns the block with the provided ID
 func (cli *DBClient) GetBlockByID(number uint64) (*models.Block, error) {
 	query := strings.Join([]string{
-		"SELECT b.*, ens.name FROM blocks AS b",
+		"SELECT b.*, ARRAY_TO_STRING((ARRAY_AGG(DISTINCT ens.name))[:1], ', ') producer_ens",
+		" FROM blocks AS b",
 		" LEFT JOIN ens ON ens.address = b.producer",
+		" GROUP BY b.number",
 		" WHERE b.number = $1"}, "")
 	rows, err := cli.db.Query(query, number)
 	if err != nil {
@@ -213,8 +215,10 @@ func (cli *DBClient) GetBlockByHash(hash string) (*models.Block, error) {
 	// the required structure is E'\\xDEADBEEF'
 	// For more, check https://www.postgresql.org/docs/9.0/static/datatype-binary.html
 	query := strings.Join([]string{
-		"SELECT b.*, ens.name FROM blocks AS b",
+		"SELECT b.*, ARRAY_TO_STRING((ARRAY_AGG(DISTINCT ens.name))[:1], ', ') producer_ens",
+		" FROM blocks AS b",
 		" LEFT JOIN ens ON ens.address = b.producer",
+		" GROUP BY b.number",
 		" WHERE b.hash = E'\\\\", hash[1:], "'"}, "")
 	rows, err := cli.db.Query(query)
 
@@ -274,9 +278,11 @@ func (cli *DBClient) GetBlockByHash(hash string) (*models.Block, error) {
 // GetBlockRange returns range of blocks
 func (cli *DBClient) GetBlockRange(fromNumber, rng uint32) ([]models.Block, error) {
 	query := strings.Join([]string{
-		"SELECT b.*, ens.name FROM blocks AS b",
+		"SELECT b.*, ARRAY_TO_STRING((ARRAY_AGG(DISTINCT ens.name))[:1], ', ') producer_ens",
+		" FROM blocks AS b",
 		" LEFT JOIN ens ON ens.address = b.producer",
 		" WHERE b.number <= $1",
+		" GROUP BY b.number",
 		" ORDER BY b.number DESC LIMIT $2"}, "")
 	rows, err := cli.db.Query(query, fromNumber, rng)
 	if err != nil {
@@ -336,7 +342,8 @@ func (cli *DBClient) GetBlocksByTimestamp(timestamp hexutil.Uint64, timestampCon
 	// the required structure is E'\\xDEADBEEF'
 	// For more, check https://www.postgresql.org/docs/9.0/static/datatype-binary.html
 	query := strings.Join([]string{
-		"SELECT b.*, ens.name FROM blocks AS b",
+		"SELECT b.*, ARRAY_TO_STRING((ARRAY_AGG(DISTINCT ens.name))[:1], ', ') producer_ens",
+		" FROM blocks AS b",
 		" LEFT JOIN ens ON ens.address = b.producer"}, "")
 
 	switch timestampCondition {
@@ -352,7 +359,9 @@ func (cli *DBClient) GetBlocksByTimestamp(timestamp hexutil.Uint64, timestampCon
 		query = strings.Join([]string{query, " AND b.producer = E'\\\\", producer[1:], "'"}, "")
 	}
 
-	query = strings.Join([]string{query, " ORDER BY b.timestamp DESC"}, "")
+	query = strings.Join([]string{query,
+		" GROUP BY b.number",
+		" ORDER BY b.timestamp DESC"}, "")
 
 	rows, err := cli.db.Query(query, timestamp)
 	if err != nil {
@@ -412,11 +421,16 @@ func (cli *DBClient) GetTransactionByHash(hash string) (*models.TransactionFull,
 	// the required structure is E'\\xDEADBEEF'
 	// For more, check https://www.postgresql.org/docs/9.0/static/datatype-binary.html
 	query := strings.Join([]string{
-		"SELECT t.*, ensf.name, enst.name, ensc.name FROM transactions AS t",
+		"SELECT t.*,",
+		" ARRAY_TO_STRING((ARRAY_AGG(DISTINCT ensf.name))[:1], ', ') from_ens,",
+		" ARRAY_TO_STRING((ARRAY_AGG(DISTINCT enst.name))[:1], ', ') to_ens,",
+		" ARRAY_TO_STRING((ARRAY_AGG(DISTINCT ensc.name))[:1], ', ') contract_ens",
+		" FROM transactions AS t",
 		" LEFT JOIN ens AS ensf ON ensf.address = t.addr_from",
 		" LEFT JOIN ens AS enst ON enst.address = t.addr_to",
 		" LEFT JOIN ens AS ensc ON ensc.address = t.contract_address",
-		" WHERE t.hash = E'\\\\", hash[1:], "'"}, "")
+		" WHERE t.hash = E'\\\\", hash[1:], "'",
+		" GROUP BY t.hash"}, "")
 	rows, err := cli.db.Query(query)
 
 	if err != nil {
@@ -567,8 +581,15 @@ func (cli *DBClient) GetTransactionsByAddress(address string, addrtype models.Ad
 	// Query for bytea value with the hex method, pass from char [1,end) since
 	// the required structure is E'\\xDEADBEEF'
 	// For more, check https://www.postgresql.org/docs/9.0/static/datatype-binary.html
+	querySelect := strings.Join([]string{
+		"SELECT t.*,",
+		" ARRAY_TO_STRING((ARRAY_AGG(DISTINCT ensf.name))[:1], ', ') from_ens,",
+		" ARRAY_TO_STRING((ARRAY_AGG(DISTINCT enst.name))[:1], ', ') to_ens,",
+		" ARRAY_TO_STRING((ARRAY_AGG(DISTINCT ensc.name))[:1], ', ') contract_ens"}, "")
+
 	query := strings.Join([]string{
-		"SELECT t.*, ensf.name, enst.name, ensc.name FROM transactions AS t",
+		querySelect,
+		" FROM transactions AS t",
 		" LEFT JOIN ens AS ensf ON ensf.address = t.addr_from",
 		" LEFT JOIN ens AS enst ON enst.address = t.addr_to",
 		" LEFT JOIN ens AS ensc ON ensc.address = t.contract_address"}, "")
@@ -582,7 +603,7 @@ func (cli *DBClient) GetTransactionsByAddress(address string, addrtype models.Ad
 		query = strings.Join([]string{query, " WHERE t.addr_to = E'\\\\", address[1:], "'", " or t.addr_from = E'\\\\", address[1:], "'"}, "")
 	case models.ADDRESS_BLOCKHASH:
 		query = strings.Join([]string{
-			"SELECT t.*, ensf.name, enst.name, ensc.name",
+			querySelect,
 			" FROM transactions AS t",
 			" INNER JOIN blocks AS b ON b.number = t.block_number",
 			" LEFT JOIN ens AS ensf ON ensf.address = t.addr_from",
@@ -590,6 +611,8 @@ func (cli *DBClient) GetTransactionsByAddress(address string, addrtype models.Ad
 			" LEFT JOIN ens AS ensc ON ensc.address = t.contract_address",
 			" WHERE b.hash = E'\\\\", address[1:], "'"}, "")
 	}
+
+	query = strings.Join([]string{query, " GROUP BY t.hash"}, "")
 
 	if order != "asc" {
 		switch addrtype {
@@ -872,9 +895,10 @@ func (cli *DBClient) GetBalanceStats() (uint64, uint64, uint64, error) {
 // GetTopBalances gets the rich list
 func (cli *DBClient) GetTopBalances(limit uint64, offset uint64) ([]models.Balance, error) {
 	query := strings.Join([]string{
-		"SELECT b.address, b.amount, b.block_number, ens.name",
+		"SELECT b.address, b.amount, b.block_number, ARRAY_TO_STRING((ARRAY_AGG(DISTINCT ens.name))[:1], ', ') address_ens",
 		" FROM balances AS b",
 		" LEFT JOIN ens ON ens.address = b.address",
+		" GROUP BY b.address",
 		" ORDER BY b.amount DESC LIMIT $1 OFFSET $2"}, "")
 	rows, err := cli.db.Query(query, limit, offset)
 
