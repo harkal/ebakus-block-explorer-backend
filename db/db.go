@@ -154,8 +154,8 @@ func (cli *DBClient) GetBlockByID(number uint64) (*models.Block, error) {
 		"SELECT b.*, ARRAY_TO_STRING((ARRAY_AGG(DISTINCT ens.name))[:1], ', ') producer_ens",
 		" FROM blocks AS b",
 		" LEFT JOIN ens ON ens.address = b.producer",
-		" GROUP BY b.number",
-		" WHERE b.number = $1"}, "")
+		" WHERE b.number = $1",
+		" GROUP BY b.number"}, "")
 	rows, err := cli.db.Query(query, number)
 	if err != nil {
 		return nil, err
@@ -218,8 +218,8 @@ func (cli *DBClient) GetBlockByHash(hash string) (*models.Block, error) {
 		"SELECT b.*, ARRAY_TO_STRING((ARRAY_AGG(DISTINCT ens.name))[:1], ', ') producer_ens",
 		" FROM blocks AS b",
 		" LEFT JOIN ens ON ens.address = b.producer",
-		" GROUP BY b.number",
-		" WHERE b.hash = E'\\\\", hash[1:], "'"}, "")
+		" WHERE b.hash = E'\\\\", hash[1:], "'",
+		" GROUP BY b.number"}, "")
 	rows, err := cli.db.Query(query)
 
 	if err != nil {
