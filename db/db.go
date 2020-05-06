@@ -581,38 +581,43 @@ func (cli *DBClient) GetTransactionsByAddress(address string, addrtype models.Ad
 	// Query for bytea value with the hex method, pass from char [1,end) since
 	// the required structure is E'\\xDEADBEEF'
 	// For more, check https://www.postgresql.org/docs/9.0/static/datatype-binary.html
-	querySelect := strings.Join([]string{
-		"SELECT t.*,",
-		" ARRAY_TO_STRING((ARRAY_AGG(DISTINCT ensf.name))[:1], ', ') from_ens,",
-		" ARRAY_TO_STRING((ARRAY_AGG(DISTINCT enst.name))[:1], ', ') to_ens,",
-		" ARRAY_TO_STRING((ARRAY_AGG(DISTINCT ensc.name))[:1], ', ') contract_ens"}, "")
-
-	query := strings.Join([]string{
-		querySelect,
-		" FROM transactions AS t",
-		" LEFT JOIN ens AS ensf ON ensf.address = t.addr_from",
-		" LEFT JOIN ens AS enst ON enst.address = t.addr_to",
-		" LEFT JOIN ens AS ensc ON ensc.address = t.contract_address"}, "")
+	withQuery := "SELECT * FROM transactions"
 
 	switch addrtype {
 	case models.ADDRESS_TO:
-		query = strings.Join([]string{query, " WHERE t.addr_to = E'\\\\", address[1:], "'"}, "")
+		withQuery = strings.Join([]string{withQuery, " WHERE addr_to = E'\\\\", address[1:], "'"}, "")
 	case models.ADDRESS_FROM:
-		query = strings.Join([]string{query, " WHERE t.addr_from = E'\\\\", address[1:], "'"}, "")
+		withQuery = strings.Join([]string{withQuery, " WHERE addr_from = E'\\\\", address[1:], "'"}, "")
 	case models.ADDRESS_ALL:
-		query = strings.Join([]string{query, " WHERE t.addr_to = E'\\\\", address[1:], "'", " or t.addr_from = E'\\\\", address[1:], "'"}, "")
+		withQuery = strings.Join([]string{withQuery, " WHERE addr_to = E'\\\\", address[1:], "'", " or addr_from = E'\\\\", address[1:], "'"}, "")
 	case models.ADDRESS_BLOCKHASH:
-		query = strings.Join([]string{
-			querySelect,
-			" FROM transactions AS t",
-			" INNER JOIN blocks AS b ON b.number = t.block_number",
-			" LEFT JOIN ens AS ensf ON ensf.address = t.addr_from",
-			" LEFT JOIN ens AS enst ON enst.address = t.addr_to",
-			" LEFT JOIN ens AS ensc ON ensc.address = t.contract_address",
-			" WHERE b.hash = E'\\\\", address[1:], "'"}, "")
+		withQuery = strings.Join([]string{"SELECT transactions.* FROM transactions, blocks WHERE blocks.number = transactions.block_number AND blocks.hash = E'\\\\", address[1:], "'"}, "")
 	}
 
-	query = strings.Join([]string{query, " GROUP BY t.hash"}, "")
+	if order != "asc" {
+		switch addrtype {
+		case models.LATEST:
+			withQuery = strings.Join([]string{withQuery, " ORDER BY block_number ", order}, "")
+		default:
+			withQuery = strings.Join([]string{withQuery, " ORDER BY timestamp ", order}, "")
+		}
+	}
+
+	withQuery = strings.Join([]string{withQuery, " OFFSET $1 LIMIT $2"}, "")
+
+	query := strings.Join([]string{
+		"WITH t AS (", withQuery, ")",
+		" SELECT t.*,",
+		" ARRAY_TO_STRING((ARRAY_AGG(DISTINCT ensf.name))[:1], ', ') from_ens,",
+		" ARRAY_TO_STRING((ARRAY_AGG(DISTINCT enst.name))[:1], ', ') to_ens,",
+		" ARRAY_TO_STRING((ARRAY_AGG(DISTINCT ensc.name))[:1], ', ') contract_ens",
+		" FROM t",
+		" LEFT JOIN ens AS ensf ON ensf.address = t.addr_from",
+		" LEFT JOIN ens AS enst ON enst.address = t.addr_to",
+		" LEFT JOIN ens AS ensc ON ensc.address = t.contract_address",
+		" GROUP BY t.hash, t.nonce, t.block_hash, t.block_number, t.tx_index, t.addr_from, t.addr_to,",
+		" t.value, t.gas_limit, t.gas_used, t.cumulative_gas_used, t.gas_price, t.contract_address,",
+		"  t.input, t.status, t.work_nonce, t.timestamp"}, "")
 
 	if order != "asc" {
 		switch addrtype {
@@ -622,8 +627,6 @@ func (cli *DBClient) GetTransactionsByAddress(address string, addrtype models.Ad
 			query = strings.Join([]string{query, " ORDER BY t.timestamp ", order}, "")
 		}
 	}
-
-	query = strings.Join([]string{query, " OFFSET $1 LIMIT $2"}, "")
 
 	rows, err := cli.db.Query(query, offset, limit)
 
