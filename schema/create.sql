@@ -40,6 +40,7 @@ CREATE TABLE transactions (
 
 CREATE INDEX txfrom_idx ON transactions USING btree (addr_from);
 CREATE INDEX txto_idx ON transactions USING btree (addr_to);
+CREATE INDEX txcontract_address_idx ON transactions USING btree (contract_address);
 CREATE INDEX txblock_number_idx ON transactions USING btree (block_number);
 CREATE INDEX txtimestamp_idx ON transactions USING btree (timestamp);
 
