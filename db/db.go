@@ -922,7 +922,7 @@ func (cli *DBClient) GetTopBalances(limit uint64, offset uint64) ([]models.Balan
 		" FROM b",
 		"   LEFT JOIN ens ON ens.address = b.address",
 		" GROUP BY b.address, b.amount, b.block_number",
-		" ORDER BY b.amount DESC LIMIT $1 OFFSET $2"}, "")
+		" ORDER BY b.amount DESC"}, "")
 	rows, err := cli.db.Query(query, limit, offset)
 
 	if err != nil {
