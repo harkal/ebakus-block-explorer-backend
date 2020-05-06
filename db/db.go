@@ -153,7 +153,7 @@ func (cli *DBClient) GetBlockByID(number uint64) (*models.Block, error) {
 	query := strings.Join([]string{
 		"SELECT b.*, ARRAY_TO_STRING((ARRAY_AGG(DISTINCT ens.name))[:1], ', ') producer_ens",
 		" FROM blocks AS b",
-		" LEFT JOIN ens ON ens.address = b.producer",
+		"   LEFT JOIN ens ON ens.address = b.producer",
 		" WHERE b.number = $1",
 		" GROUP BY b.number"}, "")
 	rows, err := cli.db.Query(query, number)
@@ -217,7 +217,7 @@ func (cli *DBClient) GetBlockByHash(hash string) (*models.Block, error) {
 	query := strings.Join([]string{
 		"SELECT b.*, ARRAY_TO_STRING((ARRAY_AGG(DISTINCT ens.name))[:1], ', ') producer_ens",
 		" FROM blocks AS b",
-		" LEFT JOIN ens ON ens.address = b.producer",
+		"   LEFT JOIN ens ON ens.address = b.producer",
 		" WHERE b.hash = E'\\\\", hash[1:], "'",
 		" GROUP BY b.number"}, "")
 	rows, err := cli.db.Query(query)
@@ -277,13 +277,19 @@ func (cli *DBClient) GetBlockByHash(hash string) (*models.Block, error) {
 
 // GetBlockRange returns range of blocks
 func (cli *DBClient) GetBlockRange(fromNumber, rng uint32) ([]models.Block, error) {
+
+	withQuery := "SELECT * FROM blocks WHERE number <= $1 ORDER BY number DESC LIMIT $2"
+
 	query := strings.Join([]string{
-		"SELECT b.*, ARRAY_TO_STRING((ARRAY_AGG(DISTINCT ens.name))[:1], ', ') producer_ens",
-		" FROM blocks AS b",
-		" LEFT JOIN ens ON ens.address = b.producer",
-		" WHERE b.number <= $1",
-		" GROUP BY b.number",
+		"WITH b AS (", withQuery, ")",
+		" SELECT b.*,",
+		"   ARRAY_TO_STRING((ARRAY_AGG(DISTINCT ens.name))[:1], ', ') producer_ens",
+		" FROM b",
+		"   LEFT JOIN ens ON ens.address = b.producer",
+		" GROUP BY b.number, b.timestamp, b.hash, b.parent_hash, b.transactions_root, b.receipts_root,",
+		"   b.size, b.transaction_count, b.gas_used, b.gas_limit, b.delegates, b.producer, b.signature",
 		" ORDER BY b.number DESC LIMIT $2"}, "")
+
 	rows, err := cli.db.Query(query, fromNumber, rng)
 	if err != nil {
 		return nil, err
@@ -341,26 +347,31 @@ func (cli *DBClient) GetBlocksByTimestamp(timestamp hexutil.Uint64, timestampCon
 	// Query for bytea value with the hex method, pass from char [1,end) since
 	// the required structure is E'\\xDEADBEEF'
 	// For more, check https://www.postgresql.org/docs/9.0/static/datatype-binary.html
-	query := strings.Join([]string{
-		"SELECT b.*, ARRAY_TO_STRING((ARRAY_AGG(DISTINCT ens.name))[:1], ', ') producer_ens",
-		" FROM blocks AS b",
-		" LEFT JOIN ens ON ens.address = b.producer"}, "")
+	withQuery := "SELECT * FROM blocks"
 
 	switch timestampCondition {
 	case models.TIMESTAMP_EQUAL:
-		query = strings.Join([]string{query, " WHERE b.timestamp = $1"}, "")
+		withQuery = strings.Join([]string{withQuery, " WHERE timestamp = $1"}, "")
 	case models.TIMESTAMP_GREATER_EQUAL_THAN:
-		query = strings.Join([]string{query, " WHERE b.timestamp >= $1"}, "")
+		withQuery = strings.Join([]string{withQuery, " WHERE timestamp >= $1"}, "")
 	case models.TIMESTAMP_SMALLER_EQUAL_THAN:
-		query = strings.Join([]string{query, " WHERE b.timestamp <= $1"}, "")
+		withQuery = strings.Join([]string{withQuery, " WHERE timestamp <= $1"}, "")
 	}
 
 	if common.IsHexAddress(producer) {
-		query = strings.Join([]string{query, " AND b.producer = E'\\\\", producer[1:], "'"}, "")
+		withQuery = strings.Join([]string{withQuery, " AND producer = E'\\\\", producer[1:], "'"}, "")
 	}
 
-	query = strings.Join([]string{query,
-		" GROUP BY b.number",
+	withQuery = strings.Join([]string{withQuery, " ORDER BY timestamp DESC"}, "")
+
+	query := strings.Join([]string{
+		"WITH b AS (", withQuery, ")",
+		" SELECT b.*,",
+		"   ARRAY_TO_STRING((ARRAY_AGG(DISTINCT ens.name))[:1], ', ') producer_ens",
+		" FROM b",
+		"   LEFT JOIN ens ON ens.address = b.producer",
+		" GROUP BY b.number, b.timestamp, b.hash, b.parent_hash, b.transactions_root, b.receipts_root,",
+		"   b.size, b.transaction_count, b.gas_used, b.gas_limit, b.delegates, b.producer, b.signature",
 		" ORDER BY b.timestamp DESC"}, "")
 
 	rows, err := cli.db.Query(query, timestamp)
@@ -420,17 +431,22 @@ func (cli *DBClient) GetTransactionByHash(hash string) (*models.TransactionFull,
 	// Query for bytea value with the hex method, pass from char [1,end) since
 	// the required structure is E'\\xDEADBEEF'
 	// For more, check https://www.postgresql.org/docs/9.0/static/datatype-binary.html
+
+	withQuery := strings.Join([]string{"SELECT * FROM transactions WHERE hash = E'\\\\", hash[1:], "'"}, "")
+
 	query := strings.Join([]string{
-		"SELECT t.*,",
-		" ARRAY_TO_STRING((ARRAY_AGG(DISTINCT ensf.name))[:1], ', ') from_ens,",
-		" ARRAY_TO_STRING((ARRAY_AGG(DISTINCT enst.name))[:1], ', ') to_ens,",
-		" ARRAY_TO_STRING((ARRAY_AGG(DISTINCT ensc.name))[:1], ', ') contract_ens",
-		" FROM transactions AS t",
-		" LEFT JOIN ens AS ensf ON ensf.address = t.addr_from",
-		" LEFT JOIN ens AS enst ON enst.address = t.addr_to",
-		" LEFT JOIN ens AS ensc ON ensc.address = t.contract_address",
-		" WHERE t.hash = E'\\\\", hash[1:], "'",
-		" GROUP BY t.hash"}, "")
+		"WITH t AS (", withQuery, ")",
+		" SELECT t.*,",
+		"   ARRAY_TO_STRING((ARRAY_AGG(DISTINCT ensf.name))[:1], ', ') from_ens,",
+		"   ARRAY_TO_STRING((ARRAY_AGG(DISTINCT enst.name))[:1], ', ') to_ens,",
+		"   ARRAY_TO_STRING((ARRAY_AGG(DISTINCT ensc.name))[:1], ', ') contract_ens",
+		" FROM t",
+		"   LEFT JOIN ens AS ensf ON ensf.address = t.addr_from",
+		"   LEFT JOIN ens AS enst ON enst.address = t.addr_to",
+		"   LEFT JOIN ens AS ensc ON ensc.address = t.contract_address",
+		" GROUP BY t.hash, t.nonce, t.block_hash, t.block_number, t.tx_index, t.addr_from, t.addr_to, t.value,",
+		"   t.gas_limit, t.gas_used, t.cumulative_gas_used, t.gas_price, t.contract_address, t.input, t.status,",
+		"   t.work_nonce, t.timestamp"}, "")
 	rows, err := cli.db.Query(query)
 
 	if err != nil {
@@ -608,16 +624,16 @@ func (cli *DBClient) GetTransactionsByAddress(address string, addrtype models.Ad
 	query := strings.Join([]string{
 		"WITH t AS (", withQuery, ")",
 		" SELECT t.*,",
-		" ARRAY_TO_STRING((ARRAY_AGG(DISTINCT ensf.name))[:1], ', ') from_ens,",
-		" ARRAY_TO_STRING((ARRAY_AGG(DISTINCT enst.name))[:1], ', ') to_ens,",
-		" ARRAY_TO_STRING((ARRAY_AGG(DISTINCT ensc.name))[:1], ', ') contract_ens",
+		"   ARRAY_TO_STRING((ARRAY_AGG(DISTINCT ensf.name))[:1], ', ') from_ens,",
+		"   ARRAY_TO_STRING((ARRAY_AGG(DISTINCT enst.name))[:1], ', ') to_ens,",
+		"   ARRAY_TO_STRING((ARRAY_AGG(DISTINCT ensc.name))[:1], ', ') contract_ens",
 		" FROM t",
-		" LEFT JOIN ens AS ensf ON ensf.address = t.addr_from",
-		" LEFT JOIN ens AS enst ON enst.address = t.addr_to",
-		" LEFT JOIN ens AS ensc ON ensc.address = t.contract_address",
+		"   LEFT JOIN ens AS ensf ON ensf.address = t.addr_from",
+		"   LEFT JOIN ens AS enst ON enst.address = t.addr_to",
+		"   LEFT JOIN ens AS ensc ON ensc.address = t.contract_address",
 		" GROUP BY t.hash, t.nonce, t.block_hash, t.block_number, t.tx_index, t.addr_from, t.addr_to,",
-		" t.value, t.gas_limit, t.gas_used, t.cumulative_gas_used, t.gas_price, t.contract_address,",
-		"  t.input, t.status, t.work_nonce, t.timestamp"}, "")
+		"   t.value, t.gas_limit, t.gas_used, t.cumulative_gas_used, t.gas_price, t.contract_address,",
+		"   t.input, t.status, t.work_nonce, t.timestamp"}, "")
 
 	if order != "asc" {
 		switch addrtype {
@@ -897,11 +913,15 @@ func (cli *DBClient) GetBalanceStats() (uint64, uint64, uint64, error) {
 
 // GetTopBalances gets the rich list
 func (cli *DBClient) GetTopBalances(limit uint64, offset uint64) ([]models.Balance, error) {
+	withQuery := "SELECT address, amount, block_number FROM balances ORDER BY amount DESC LIMIT $1 OFFSET $2"
+
 	query := strings.Join([]string{
-		"SELECT b.address, b.amount, b.block_number, ARRAY_TO_STRING((ARRAY_AGG(DISTINCT ens.name))[:1], ', ') address_ens",
-		" FROM balances AS b",
-		" LEFT JOIN ens ON ens.address = b.address",
-		" GROUP BY b.address",
+		"WITH b AS (", withQuery, ")",
+		" SELECT b.*,",
+		"   ARRAY_TO_STRING((ARRAY_AGG(DISTINCT ens.name))[:1], ', ') address_ens",
+		" FROM b",
+		"   LEFT JOIN ens ON ens.address = b.address",
+		" GROUP BY b.address, b.amount, b.block_number",
 		" ORDER BY b.amount DESC LIMIT $1 OFFSET $2"}, "")
 	rows, err := cli.db.Query(query, limit, offset)
 
