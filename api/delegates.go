@@ -75,15 +75,7 @@ func getDelegatesStats(address string) (map[string]interface{}, error) {
 
 	// if lookupAddress not in delegates then skip
 	if isAddressLookup {
-		addressFound := false
-		for _, delegate := range latestBlock.Delegates {
-			addressFound = lookupAddress == delegate
-			if addressFound {
-				break
-			}
-		}
-
-		if !addressFound {
+		if addressFound, err := ipc.CheckDelegateElected(lookupAddress, -1); !addressFound || err != nil {
 			return nil, ErrAddressNotFoundInDelegates
 		}
 	}
@@ -95,40 +87,40 @@ func getDelegatesStats(address string) (map[string]interface{}, error) {
 	}
 
 	// create a map using `address` as key for our algorithm lookup
-	delegateVotesMap := make(map[common.Address]uint64, len(delegateVotes))
+	delegateVotesMap := make(map[common.Address]uint64)
 	for _, delegateVoteInfo := range delegateVotes {
 		delegateVotesMap[delegateVoteInfo.Address] = delegateVoteInfo.Stake
 	}
 
 	// 2. get latest blocks from DB during the last `blockDensityLookBackTime` seconds
-	timestampOfEarlierBlock := float64(latestBlock.TimeStamp) - float64(longestBlockDensityLookBackTime)
-	latestBlocks, err := dbc.GetBlocksByTimestamp(hexutil.Uint64(timestampOfEarlierBlock), models.TIMESTAMP_GREATER_EQUAL_THAN, address)
+	timestampOfEarlierBlock := float64(latestBlock.TimeStamp) - float64(longestBlockDensityLookBackTime) - 1 // -1 for reading the delegates of parent block
+	latestBlocks, err := dbc.GetBlocksByTimestamp(hexutil.Uint64(timestampOfEarlierBlock), models.TIMESTAMP_GREATER_EQUAL_THAN, "")
 	if err != nil {
 		return nil, err
 	}
 
-	// create a map using `timestamp` as key for our algorithm lookup
-	latestBlocksMap := make(map[uint64]models.Block, len(latestBlocks))
-	for _, block := range latestBlocks {
-		latestBlocksMap[uint64(block.TimeStamp)] = block
-	}
-
 	// map to store the end results
-	delegatesInfo := make(map[common.Address][]models.DelegateInfo, len(latestBlock.Delegates))
+	delegatesInfo := make(map[common.Address][]models.DelegateInfo)
 
 	// temp map used during the runtime of our loop
-	delegatesRuntime := make(map[common.Address]models.DelegateInfo, len(latestBlock.Delegates))
+	delegatesRuntime := make(map[common.Address]models.DelegateInfo)
 
 	totalMissedBlocks := 0
 	remainingLookBackPeriods := blockDensityLookBackTimes
 
+	parentBlock, latestBlocks := latestBlocks[0], latestBlocks[1:]
+
 	// 3. loop back for `blockDensityLookBackTime` seconds to check for missed blocks by producers
-	for i := 0; i < longestBlockDensityLookBackTime; i++ {
-		timestamp := uint64(latestBlock.TimeStamp) - uint64(i)
-		slot := float64(timestamp) / float64(dposConfig.Period)
+	for idx, block := range latestBlocks {
+
+		if uint64(parentBlock.TimeStamp)-uint64(block.TimeStamp) > 1 {
+			totalMissedBlocks += int(uint64(parentBlock.TimeStamp)-uint64(block.TimeStamp)) - 1
+		}
+
+		slot := float64(block.TimeStamp) / float64(dposConfig.Period)
 
 		// 4. find the producer who had to produce the block at that time
-		origProducer := getSignerAtSlot(latestBlock.Delegates, slot)
+		origProducer := getSignerAtSlot(parentBlock.Delegates, slot)
 
 		// handle when:
 		//   either we search for all delegates
@@ -150,13 +142,7 @@ func getDelegatesStats(address string) (map[string]interface{}, error) {
 			delegateInfo.TotalBlocks++
 
 			// 5. check if this producer produced the block
-			actualProducer := common.Address{}
-			block, blockFound := latestBlocksMap[timestamp]
-			if blockFound {
-				actualProducer = block.Producer
-			}
-
-			if !blockFound || actualProducer != origProducer {
+			if block.Producer != origProducer {
 				delegateInfo.MissedBlocks++
 				totalMissedBlocks++
 			}
@@ -166,14 +152,14 @@ func getDelegatesStats(address string) (map[string]interface{}, error) {
 		}
 
 		// check if next lookBack period reached, in order to push delegate info into end result
-		if i+1 == remainingLookBackPeriods[0] {
+		if idx == remainingLookBackPeriods[0] {
 
 			// remove existing lookBack period from array and move to next one
 			remainingLookBackPeriods = remainingLookBackPeriods[1:]
 
 			// 6. handle data for current period for all delegates
 			for curAddress, curDelegateInfo := range delegatesRuntime {
-				curDelegateInfo.SecondsExamined = uint64(i + 1)
+				curDelegateInfo.SecondsExamined = uint64(idx)
 				curDelegateInfo.Density = float64(1) - (float64(curDelegateInfo.MissedBlocks) / float64(curDelegateInfo.TotalBlocks))
 
 				// hack: we inject stake into all periods for now, it's not correct
@@ -186,14 +172,14 @@ func getDelegatesStats(address string) (map[string]interface{}, error) {
 				delegatesInfo[curAddress] = append(delegatesInfo[curAddress], curDelegateInfo)
 			}
 		}
+
+		parentBlock = block
 	}
 
 	// parse delegates to array in order to maintain the ordering
 	delegatesResponse := make([][]models.DelegateInfo, 0, len(delegatesInfo))
-	for _, delegate := range latestBlock.Delegates {
-		if delegateInfo, ok := delegatesInfo[delegate]; ok {
-			delegatesResponse = append(delegatesResponse, delegateInfo)
-		}
+	for _, delegateInfo := range delegatesInfo {
+		delegatesResponse = append(delegatesResponse, delegateInfo)
 	}
 
 	result := map[string]interface{}{
