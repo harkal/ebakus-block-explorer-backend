@@ -266,3 +266,14 @@ func (ipc *IPCInterface) GetENSAddress(contractAddress common.Address, hash comm
 	addr := common.BytesToAddress(res.Bytes())
 	return addr, nil
 }
+
+func (ipc *IPCInterface) GetChainId() (uint64, error) {
+	var v hexutil.Big
+
+	err := ipc.cli.Call(&v, "eth_chainId")
+	if err != nil {
+		return 0, err
+	}
+
+	return v.ToInt().Uint64(), nil
+}

@@ -26,6 +26,9 @@ var (
 
 func getSignerAtSlot(delegates []common.Address, slot float64) common.Address {
 	dposConfig := params.MainnetDPOSConfig
+	if chainID, err := GetChainId(); chainID != 10 && err == nil {
+		dposConfig = params.TestnetDPOSConfig
+	}
 
 	if dposConfig.DelegateCount == 0 || dposConfig.TurnBlockCount == 0 {
 		return common.Address{}
@@ -43,6 +46,9 @@ func getSignerAtSlot(delegates []common.Address, slot float64) common.Address {
 
 func getDelegatesStats(address string) (map[string]interface{}, error) {
 	dposConfig := params.MainnetDPOSConfig
+	if chainID, err := GetChainId(); chainID != 10 && err == nil {
+		dposConfig = params.TestnetDPOSConfig
+	}
 
 	isAddressLookup := common.IsHexAddress(address)
 	lookupAddress := common.HexToAddress(address)

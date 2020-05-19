@@ -2,6 +2,7 @@ package webapi
 
 import (
 	"database/sql"
+	"encoding/binary"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -829,4 +830,33 @@ func HandleGetConversionRate(w http.ResponseWriter, r *http.Request) {
 		redis.Expire(redisKey, 60*60) // 1 hour
 		w.Write(out)
 	}
+}
+
+// GetChainId returns the chainid
+func GetChainId() (uint64, error) {
+	ipc := ipc.GetIPC()
+	if ipc == nil {
+		return 0, fmt.Errorf("IPCInterface is not initialized")
+	}
+
+	redisKey := "chainId"
+	if ok, _ := redis.Exists(redisKey); ok {
+		if bChainID, err := redis.Get(redisKey); err == nil {
+			chainID := uint64(binary.LittleEndian.Uint64(bChainID))
+			return chainID, nil
+		}
+	}
+
+	chainID, err := ipc.GetChainId()
+	if err != nil {
+		return 0, err
+	}
+
+	bChainID := make([]byte, 8)
+	binary.LittleEndian.PutUint64(bChainID, chainID)
+
+	redis.Set(redisKey, bChainID)
+	redis.Expire(redisKey, 60*60) // 1 hour
+
+	return chainID, nil
 }
