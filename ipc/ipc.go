@@ -197,20 +197,20 @@ func (ipc *IPCInterface) GetDelegates(number uint64) ([]models.DelegateVoteInfo,
 	return di, nil
 }
 
-func (ipc *IPCInterface) CheckDelegateElected(address common.Address, number int64) (bool, error) {
-	isElected := false
+func (ipc *IPCInterface) GetDelegate(address common.Address, number int64) (*models.DelegateVoteInfo, error) {
+	var di models.DelegateVoteInfo
 
 	blockNumber := hexutil.EncodeUint64(uint64(number))
 	if number == -1 {
 		blockNumber = "latest"
 	}
 
-	err := ipc.cli.Call(&isElected, "dpos_checkDelegateElected", address.Hex(), blockNumber)
+	err := ipc.cli.Call(&di, "dpos_getDelegate", address.Hex(), blockNumber)
 	if err != nil {
-		return isElected, err
+		return nil, err
 	}
 
-	return isElected, nil
+	return &di, nil
 }
 
 func (ipc *IPCInterface) GetAddressBalance(address common.Address) (*big.Int, error) {

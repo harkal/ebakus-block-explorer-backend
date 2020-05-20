@@ -79,23 +79,12 @@ func getDelegatesStats(address string) (map[string]interface{}, error) {
 		return nil, err
 	}
 
-	// if lookupAddress not in delegates then skip
+	var delegate *models.DelegateVoteInfo
 	if isAddressLookup {
-		if addressFound, err := ipc.CheckDelegateElected(lookupAddress, -1); !addressFound || err != nil {
-			return nil, ErrAddressNotFoundInDelegates
+		// get delegate from node, only for last block
+		if delegateInfo, err := ipc.GetDelegate(lookupAddress, int64(latestBlockNumber)); err == nil {
+			delegate = delegateInfo
 		}
-	}
-
-	// get delegate votes from node, only for last block
-	delegateVotes, err := ipc.GetDelegates(latestBlockNumber)
-	if err != nil {
-		return nil, err
-	}
-
-	// create a map using `address` as key for our algorithm lookup
-	delegateVotesMap := make(map[common.Address]uint64)
-	for _, delegateVoteInfo := range delegateVotes {
-		delegateVotesMap[delegateVoteInfo.Address] = delegateVoteInfo.Stake
 	}
 
 	// 2. get latest blocks from DB during the last `blockDensityLookBackTime` seconds
@@ -168,10 +157,11 @@ func getDelegatesStats(address string) (map[string]interface{}, error) {
 				curDelegateInfo.SecondsExamined = uint64(idx)
 				curDelegateInfo.Density = float64(1) - (float64(curDelegateInfo.MissedBlocks) / float64(curDelegateInfo.TotalBlocks))
 
-				// hack: we inject stake into all periods for now, it's not correct
-				// as we have stake for latest block only and not for the actual block
-				if stake, ok := delegateVotesMap[curAddress]; ok {
-					curDelegateInfo.Stake = stake
+				if isAddressLookup && delegate != nil {
+
+					// hack: we inject stake into all periods for now, it's not correct
+					// as we have stake for latest block only and not for the actual block
+					curDelegateInfo.Stake = delegate.Stake
 				}
 
 				// 7. store results for current period for all delegates

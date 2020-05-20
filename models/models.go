@@ -251,12 +251,13 @@ type DelegateInfo struct {
 	MissedBlocks    uint64         `json:"missed_blocks"`
 	TotalBlocks     uint64         `json:"total_blocks"`
 	Density         float64        `json:"density"`
-	Stake           uint64         `json:"stake"`
+	Stake           uint64         `json:"stake,omitempty"`
 }
 
 type DelegateVoteInfo struct {
 	Address common.Address `json:"address"`
 	Stake   uint64         `json:"stake"`
+	Elected bool           `json:"elected,omitempty"`
 }
 
 type Balance struct {
