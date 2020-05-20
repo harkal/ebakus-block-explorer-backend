@@ -197,6 +197,22 @@ func (ipc *IPCInterface) GetDelegates(number uint64) ([]models.DelegateVoteInfo,
 	return di, nil
 }
 
+func (ipc *IPCInterface) GetDelegate(address common.Address, number int64) (*models.DelegateVoteInfo, error) {
+	var di models.DelegateVoteInfo
+
+	blockNumber := hexutil.EncodeUint64(uint64(number))
+	if number == -1 {
+		blockNumber = "latest"
+	}
+
+	err := ipc.cli.Call(&di, "dpos_getDelegate", address.Hex(), blockNumber)
+	if err != nil {
+		return nil, err
+	}
+
+	return &di, nil
+}
+
 func (ipc *IPCInterface) GetAddressBalance(address common.Address) (*big.Int, error) {
 	var balance hexutil.Big
 
@@ -249,4 +265,15 @@ func (ipc *IPCInterface) GetENSAddress(contractAddress common.Address, hash comm
 
 	addr := common.BytesToAddress(res.Bytes())
 	return addr, nil
+}
+
+func (ipc *IPCInterface) GetChainId() (uint64, error) {
+	var v hexutil.Big
+
+	err := ipc.cli.Call(&v, "eth_chainId")
+	if err != nil {
+		return 0, err
+	}
+
+	return v.ToInt().Uint64(), nil
 }
