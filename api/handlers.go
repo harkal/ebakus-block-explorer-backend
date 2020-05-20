@@ -856,7 +856,6 @@ func GetChainId() (uint64, error) {
 	binary.LittleEndian.PutUint64(bChainID, chainID)
 
 	redis.Set(redisKey, bChainID)
-	redis.Expire(redisKey, 60*60) // 1 hour
 
 	return chainID, nil
 }
