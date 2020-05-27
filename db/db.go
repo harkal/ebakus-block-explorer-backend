@@ -1053,3 +1053,35 @@ func (cli *DBClient) GetEnsEntriesRange(limit uint64, offset uint64) ([]models.E
 
 	return result, nil
 }
+
+// InsertProducer inserts/updates a producer and his stats
+func (cli *DBClient) InsertProducer(producer models.Producer) error {
+	sql := `
+		INSERT INTO producers(address, produced_blocks_count, block_rewards) VALUES (E'\\x%s', %d, %d)
+		ON CONFLICT (address) DO UPDATE
+			SET produced_blocks_count = producers.produced_blocks_count + excluded.produced_blocks_count,
+				block_rewards = producers.block_rewards + excluded.block_rewards
+	`
+	adr := common.Bytes2Hex(producer.Address[:])[:]
+	blockRewards := new(big.Int).Div(producer.BlockRewards, precisionFactor).Uint64()
+	rows, err := cli.db.Query(fmt.Sprintf(sql, adr, producer.ProducedBlocksCount, blockRewards))
+	rows.Close()
+
+	return err
+}
+
+// GetProducer gets the producer
+func (cli *DBClient) GetProducer(address string) (*models.Producer, error) {
+	query := strings.Join([]string{"SELECT * FROM producers WHERE address = E'\\\\", address[1:], "'"}, "")
+	var producer models.Producer
+	var producerAddress []byte
+
+	rows := cli.db.QueryRow(query)
+	if err := rows.Scan(&producerAddress, &producer.ProducedBlocksCount, &producer.BlockRewards); err != nil {
+		return nil, err
+	}
+
+	producer.Address.SetBytes(producerAddress)
+
+	return &producer, nil
+}
