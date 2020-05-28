@@ -127,7 +127,7 @@ func (ipc *IPCInterface) StreamTransactions(wg *sync.WaitGroup, db *db.DBClient,
 	close(tCh)
 }
 
-func (ipc *IPCInterface) StreamBlocks(wg *sync.WaitGroup, db *db.DBClient, bCh chan<- *models.Block, tCh chan<- TransactionWithTimestamp, dCh chan<- *models.Block, lastBlockNumber uint64) error {
+func (ipc *IPCInterface) StreamBlocks(wg *sync.WaitGroup, db *db.DBClient, bCh chan<- *models.Block, tCh chan<- TransactionWithTimestamp, pCh chan<- common.Address, dCh chan<- *models.Block, lastBlockNumber uint64) error {
 	defer wg.Done()
 
 	for i := lastBlockNumber; i >= 0; {
@@ -145,6 +145,7 @@ func (ipc *IPCInterface) StreamBlocks(wg *sync.WaitGroup, db *db.DBClient, bCh c
 
 		if !localFound {
 			bCh <- bl
+			pCh <- bl.Producer
 
 			for _, tx := range bl.Transactions {
 				tCh <- TransactionWithTimestamp{Hash: tx, Timestamp: bl.TimeStamp}

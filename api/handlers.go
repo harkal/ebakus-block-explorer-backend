@@ -635,12 +635,13 @@ func HandleChainInfo(w http.ResponseWriter, r *http.Request) {
 	res["block_hash"] = latestBlock.Hash.Hex()
 
 	dposConfig := params.MainnetDPOSConfig
+	initialDistributionWei := new(big.Int).Mul(new(big.Int).SetUint64(dposConfig.InitialDistribution), ether)
 	blockRewards := 3171 * latestBlockNumber
-	totalSupply := dposConfig.InitialDistribution + blockRewards
-	totalSupplyWei := new(big.Int).Mul(new(big.Int).SetUint64(totalSupply), ether)
+	blockRewardsWei := new(big.Int).Mul(new(big.Int).SetUint64(blockRewards), precisionFactor)
+	totalSupplyWei := new(big.Int).Add(initialDistributionWei, blockRewardsWei)
 
-	res["total_supply"] = totalSupplyWei
-	res["circulating_supply"] = totalSupplyWei
+	res["total_supply_wei"] = totalSupplyWei
+	res["circulating_supply_wei"] = totalSupplyWei
 
 	out, err := json.Marshal(res)
 

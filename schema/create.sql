@@ -60,6 +60,12 @@ CREATE TABLE ens (
 
 CREATE INDEX ens_address_idx ON ens USING btree (address);
 
+CREATE TABLE producers (
+  address bytea PRIMARY KEY,
+  produced_blocks_count INT,
+  block_rewards BIGINT
+);
+
 CREATE TABLE globals (
   var_name CHAR(64) PRIMARY KEY,
   value_int BIGINT,

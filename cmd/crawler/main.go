@@ -31,6 +31,11 @@ const maxAccountsPerRun = 1000000
 const maxBlocksPerRun = 500000
 const rich_list_last_block = "rich_list_last_block"
 
+var (
+	valueDecimalPoints = int64(4)
+	precisionFactor    = new(big.Int).Exp(big.NewInt(10), big.NewInt(18-valueDecimalPoints), nil)
+)
+
 func doRichlist(c *cli.Context) error {
 	lock, err := lockfile.New(filepath.Join(os.TempDir(), "ebakus-crawler-richlist-"+c.String("dbname")+".lock"))
 	if err != nil {
@@ -276,11 +281,11 @@ func streamInsertTransactions(wg *sync.WaitGroup, db *db.DBClient, txsCh <-chan 
 	fmt.Println("Finished inserting", count, "transactions")
 }
 
-func streamDeleteBlockWithTransactions(wg *sync.WaitGroup, db *db.DBClient, dCh <-chan *models.Block, bCh chan<- *models.Block, tCh chan<- ipc.TransactionWithTimestamp) {
+func streamDeleteBlockWithTransactions(wg *sync.WaitGroup, db *db.DBClient, dCh <-chan *models.Block, bCh chan<- *models.Block, tCh chan<- ipc.TransactionWithTimestamp, pCh chan<- common.Address) {
 	defer wg.Done()
 
 	for bl := range dCh {
-		err := db.DeleteBlockWithTransactionsByID(uint64(bl.Number))
+		err := db.DeleteBlockWithTransactionsByID(uint64(bl.Number), bl.Producer)
 
 		if err != nil {
 			log.Println("Error streamDeleteBlockWithTransactions", err.Error())
@@ -290,6 +295,7 @@ func streamDeleteBlockWithTransactions(wg *sync.WaitGroup, db *db.DBClient, dCh 
 		}
 
 		bCh <- bl
+		pCh <- bl.Producer
 
 		for _, tx := range bl.Transactions {
 			tCh <- ipc.TransactionWithTimestamp{Hash: tx, Timestamp: bl.TimeStamp}
@@ -298,6 +304,52 @@ func streamDeleteBlockWithTransactions(wg *sync.WaitGroup, db *db.DBClient, dCh 
 
 	close(bCh)
 	close(tCh)
+	close(pCh)
+}
+
+func streamInsertProducers(wg *sync.WaitGroup, db *db.DBClient, pCh chan common.Address) (int, error) {
+	defer wg.Done()
+
+	const bufSize = 50
+	count := 0
+	producers := make(map[common.Address]*models.Producer)
+
+	blockRewardsWei := new(big.Int).Mul(new(big.Int).SetUint64(3171), precisionFactor)
+
+	for address := range pCh {
+		if _, ok := producers[address]; !ok {
+			producers[address] = &models.Producer{
+				Address:             address,
+				ProducedBlocksCount: 1,
+				BlockRewards:        blockRewardsWei,
+			}
+		} else {
+			producers[address].ProducedBlocksCount++
+			producers[address].BlockRewards = new(big.Int).Add(producers[address].BlockRewards, blockRewardsWei)
+		}
+
+		if len(producers) >= bufSize {
+			for _, prod := range producers {
+				err := db.InsertProducer(*prod)
+				if err != nil {
+					return 0, err
+				}
+				count++
+				delete(producers, prod.Address)
+			}
+		}
+	}
+
+	for _, prod := range producers {
+		err := db.InsertProducer(*prod)
+		if err != nil {
+			return 0, err
+		}
+		count++
+		delete(producers, prod.Address)
+	}
+
+	return count, nil
 }
 
 func pullNewBlocks(c *cli.Context) error {
@@ -343,12 +395,14 @@ func pullNewBlocks(c *cli.Context) error {
 	blockCh := make(chan *models.Block, 512)
 	txsHashCh := make(chan ipcModule.TransactionWithTimestamp, 512)
 	txsCh := make(chan models.TransactionFull, 512)
+	producerCh := make(chan common.Address, 512)
 
 	var wg sync.WaitGroup
 
-	wg.Add(5)
-	go ipc.StreamBlocks(&wg, db, blockCh, txsHashCh, deleteCh, last)
-	go streamDeleteBlockWithTransactions(&wg, db, deleteCh, blockCh, txsHashCh)
+	wg.Add(6)
+	go ipc.StreamBlocks(&wg, db, blockCh, txsHashCh, producerCh, deleteCh, last)
+	go streamInsertProducers(&wg, db, producerCh)
+	go streamDeleteBlockWithTransactions(&wg, db, deleteCh, blockCh, txsHashCh, producerCh)
 
 	go ipc.StreamTransactions(&wg, db, txsCh, txsHashCh)
 	go streamInsertTransactions(&wg, db, txsCh)

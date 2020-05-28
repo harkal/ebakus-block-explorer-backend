@@ -280,3 +280,9 @@ type ENS struct {
 func (e ENS) MarshalJSON() ([]byte, error) {
 	return []byte(fmt.Sprintf(`{"address":"0x%s","hash":"0x%s","name":"%s"}`, common.Bytes2Hex(e.Address[:]), common.Bytes2Hex(e.Hash[:]), e.Name)), nil
 }
+
+type Producer struct {
+	Address             common.Address `json:"address"`
+	ProducedBlocksCount uint64         `json:"produced_blocks_count"`
+	BlockRewards        *big.Int       `json:"block_rewards"`
+}
