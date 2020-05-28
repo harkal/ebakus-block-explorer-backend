@@ -567,12 +567,7 @@ func (cli *DBClient) GetAddressTotals(address string) (blockRewards *big.Int, tx
 		return bigIntZero, 0, err
 	}
 
-	// Accumulate the rewards for the miner, if any
-	if producer.BlockRewards.Uint64() > 0 {
-		blockRewards = new(big.Int).Mul(producer.BlockRewards, precisionFactor)
-	} else {
-		blockRewards = new(big.Int).SetUint64(0)
-	}
+	blockRewards = producer.BlockRewards
 
 	return
 }
