@@ -557,32 +557,19 @@ func (cli *DBClient) GetAddressTotals(address string) (blockRewards *big.Int, tx
 	defer rows.Close()
 
 	rows.Next()
-	defer rows.Close()
-
-	var countMinedBlocks uint64
-
-	rows.Next()
-	rows.Scan(&countMinedBlocks)
-	if err = rows.Err(); err != nil {
-		return bigIntZero, 0, err
-	}
 	rows.Scan(&txCount)
 	if err = rows.Err(); err != nil {
 		return bigIntZero, 0, err
 	}
 
-	query = strings.Join([]string{"SELECT count(*) FROM blocks WHERE producer = E'\\\\", address[1:], "'"}, "")
-
-	rows, err = cli.db.Query(query)
-
+	producer, err := cli.GetProducer(address)
 	if err != nil {
 		return bigIntZero, 0, err
 	}
 
 	// Accumulate the rewards for the miner, if any
-	if countMinedBlocks > 0 {
-		blockReward := new(big.Int).Mul(big.NewInt(3171), precisionFactor)
-		blockRewards = new(big.Int).Mul(new(big.Int).SetUint64(countMinedBlocks), blockReward)
+	if producer.BlockRewards.Uint64() > 0 {
+		blockRewards = new(big.Int).Mul(producer.BlockRewards, precisionFactor)
 	} else {
 		blockRewards = new(big.Int).SetUint64(0)
 	}
@@ -1087,13 +1074,15 @@ func (cli *DBClient) GetProducer(address string) (*models.Producer, error) {
 	query := strings.Join([]string{"SELECT * FROM producers WHERE address = E'\\\\", address[1:], "'"}, "")
 	var producer models.Producer
 	var producerAddress []byte
+	var value uint64
 
 	rows := cli.db.QueryRow(query)
-	if err := rows.Scan(&producerAddress, &producer.ProducedBlocksCount, &producer.BlockRewards); err != nil {
+	if err := rows.Scan(&producerAddress, &producer.ProducedBlocksCount, &value); err != nil {
 		return nil, err
 	}
 
 	producer.Address.SetBytes(producerAddress)
+	producer.BlockRewards = new(big.Int).Mul(new(big.Int).SetUint64(value), precisionFactor)
 
 	return &producer, nil
 }
