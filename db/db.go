@@ -503,7 +503,7 @@ func (cli *DBClient) GetTransactionByHash(hash string) (*models.TransactionFull,
 }
 
 // DeleteTransactionsAndBlockByID deletes the block and its transactions by block number
-func (cli *DBClient) DeleteBlockWithTransactionsByID(number uint64) (err error) {
+func (cli *DBClient) DeleteBlockWithTransactionsByID(number uint64, producer common.Address) (err error) {
 	txn, err := cli.db.Begin()
 	if err != nil {
 		return err
@@ -531,6 +531,18 @@ func (cli *DBClient) DeleteBlockWithTransactionsByID(number uint64) (err error) 
 		return err
 	}
 
+	sql := `
+		INSERT INTO producers(address) VALUES (E'\\x%s')
+		ON CONFLICT (address) DO UPDATE
+			SET produced_blocks_count = producers.produced_blocks_count - 1,
+				block_rewards = producers.block_rewards - 3171
+			WHERE producers.produced_blocks_count > 0 AND producers.block_rewards >= 3171
+	`
+	producerAddr := common.Bytes2Hex(producer[:])[:]
+	if _, err := txn.Query(fmt.Sprintf(sql, producerAddr)); err != nil {
+		return err
+	}
+
 	return err
 }
 
@@ -545,6 +557,15 @@ func (cli *DBClient) GetAddressTotals(address string) (blockRewards *big.Int, tx
 	defer rows.Close()
 
 	rows.Next()
+	defer rows.Close()
+
+	var countMinedBlocks uint64
+
+	rows.Next()
+	rows.Scan(&countMinedBlocks)
+	if err = rows.Err(); err != nil {
+		return bigIntZero, 0, err
+	}
 	rows.Scan(&txCount)
 	if err = rows.Err(); err != nil {
 		return bigIntZero, 0, err
@@ -555,15 +576,6 @@ func (cli *DBClient) GetAddressTotals(address string) (blockRewards *big.Int, tx
 	rows, err = cli.db.Query(query)
 
 	if err != nil {
-		return bigIntZero, 0, err
-	}
-	defer rows.Close()
-
-	var countMinedBlocks uint64
-
-	rows.Next()
-	rows.Scan(&countMinedBlocks)
-	if err = rows.Err(); err != nil {
 		return bigIntZero, 0, err
 	}
 
