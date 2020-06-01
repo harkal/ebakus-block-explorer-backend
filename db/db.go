@@ -564,7 +564,7 @@ func (cli *DBClient) GetAddressTotals(address string) (blockRewards *big.Int, tx
 
 	producer, err := cli.GetProducer(address)
 	if err != nil {
-		return bigIntZero, 0, err
+		return bigIntZero, txCount, err
 	}
 
 	blockRewards = producer.BlockRewards
