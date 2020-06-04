@@ -115,10 +115,11 @@ func doRichlist(c *cli.Context) error {
 
 	lastBlock = i
 
-	// count, min, _, err := db.GetBalanceStats()
+	// count, minLiquid, _, minStaked, _, err := db.GetBalanceStats()
 	// if err != nil {
 	// 	log.Println(err)
 	// }
+	// min := minLiquid + minStaked
 
 	log.Println("Total accounts touched: ", len(accounts))
 
@@ -144,13 +145,15 @@ func doRichlist(c *cli.Context) error {
 			log.Println("Retrieve balance failed:", address, err)
 			continue
 		}
+		liquid := new(big.Int).Div(bigBalance, big.NewInt(1e14)).Uint64()
+
 		staked, err := ipc.GetAddressStaked(address)
 		if err != nil {
 			log.Println("Retrieve stake failed:", address, err)
 			continue
 		}
 
-		totalBalance := new(big.Int).Div(bigBalance, big.NewInt(1e14)).Uint64() + staked
+		// totalBalance := liquid + staked
 
 		// if count < maxRichList {
 		// 	if totalBalance < min {
@@ -164,7 +167,7 @@ func doRichlist(c *cli.Context) error {
 		// 	addressToBalance[address] = &models.Balance{Address: address, Amount: totalBalance, BlockNumber: bn}
 		// }
 
-		db.InsertBalance(address, totalBalance, bn)
+		db.InsertBalance(address, liquid, staked, bn)
 	}
 
 	balances, err := db.GetTopBalances(maxRichList, 0)
@@ -173,7 +176,7 @@ func doRichlist(c *cli.Context) error {
 	}
 
 	if len(balances) > 0 {
-		db.PurgeBalanceObject(balances[len(balances)-1].Amount)
+		db.PurgeBalanceObject(balances[len(balances)-1].LiquidAmount + balances[len(balances)-1].StakedAmount)
 	}
 
 	err = db.SetGlobalInt(rich_list_last_block, lastBlock)
