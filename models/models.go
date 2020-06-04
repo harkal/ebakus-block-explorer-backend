@@ -269,7 +269,7 @@ type Balance struct {
 }
 
 func (b Balance) MarshalJSON() ([]byte, error) {
-	return []byte(fmt.Sprintf(`{"address":"0x%s","addressEns":"%s","liquidAmount":%.4f},"stakedAmount":%.4f},"totalAmount":%.4f}`,
+	return []byte(fmt.Sprintf(`{"address":"0x%s","addressEns":"%s","liquidAmount":%.4f,"stakedAmount":%.4f,"totalAmount":%.4f}`,
 		common.Bytes2Hex(b.Address[:]), b.AddressEns, float64(b.LiquidAmount)/10000.0, float64(b.StakedAmount)/10000.0, float64(b.LiquidAmount+b.StakedAmount)/10000.0)), nil
 }
 
