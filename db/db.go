@@ -897,7 +897,7 @@ func (cli *DBClient) InsertBalance(address common.Address, liquidBalance uint64,
 
 // GetBalanceStats gets the table stats
 func (cli *DBClient) GetBalanceStats() (uint64, uint64, uint64, uint64, uint64, error) {
-	query := `select count(*), max(liquid_amount), min(liquid_amount) from balances`
+	query := `select count(*), max(liquid_amount), min(liquid_amount), max(staked_amount), min(staked_amount) from balances`
 	var count, maxLiquid, minLiquid, maxStaked, minStaked uint64
 	err := cli.db.QueryRow(query).Scan(&count, &maxLiquid, &minLiquid, &maxStaked, &minStaked)
 	if err != nil {
@@ -951,7 +951,7 @@ func (cli *DBClient) GetTopBalances(limit uint64, offset uint64) ([]models.Balan
 
 // PurgeBalanceObject purges balances less than minAmount
 func (cli *DBClient) PurgeBalanceObject(minAmount uint64) error {
-	query := `DELETE FROM balances WHERE amount < $1`
+	query := `DELETE FROM balances WHERE liquid_amount + staked_amount < $1`
 
 	cli.db.QueryRow(query, minAmount)
 
