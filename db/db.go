@@ -897,14 +897,14 @@ func (cli *DBClient) InsertBalance(address common.Address, liquidBalance uint64,
 
 // GetBalanceStats gets the table stats
 func (cli *DBClient) GetBalanceStats() (uint64, uint64, uint64, uint64, uint64, error) {
-	query := `select count(*), max(liquid_amount), min(liquid_amount), max(staked_amount), min(staked_amount) from balances`
-	var count, maxLiquid, minLiquid, maxStaked, minStaked uint64
-	err := cli.db.QueryRow(query).Scan(&count, &maxLiquid, &minLiquid, &maxStaked, &minStaked)
+	query := `select count(*), min(liquid_amount), max(liquid_amount), min(staked_amount), max(staked_amount) from balances`
+	var count, minLiquid, maxLiquid, minStaked, maxStaked uint64
+	err := cli.db.QueryRow(query).Scan(&count, &minLiquid, &maxLiquid, &minStaked, &maxStaked)
 	if err != nil {
 		return 0, 0, 0, 0, 0, err
 	}
 
-	return count, maxLiquid, minLiquid, maxStaked, minStaked, nil
+	return count, minLiquid, maxLiquid, minStaked, maxStaked, nil
 }
 
 // GetTopBalances gets the rich list
