@@ -261,14 +261,16 @@ type DelegateVoteInfo struct {
 }
 
 type Balance struct {
-	Address     common.Address `json:"address"`
-	AddressEns  string         `json:"addressEns"`
-	Amount      uint64         `json:"amount"`
-	BlockNumber uint64         `json:"block_number"`
+	Address      common.Address `json:"address"`
+	AddressEns   string         `json:"addressEns"`
+	LiquidAmount uint64         `json:"liquidAmount"`
+	StakedAmount uint64         `json:"stakedAmount"`
+	BlockNumber  uint64         `json:"blockNumber"`
 }
 
 func (b Balance) MarshalJSON() ([]byte, error) {
-	return []byte(fmt.Sprintf(`{"address":"0x%s","addressEns":"%s","amount":%.4f}`, common.Bytes2Hex(b.Address[:]), b.AddressEns, float64(b.Amount)/10000.0)), nil
+	return []byte(fmt.Sprintf(`{"address":"0x%s","addressEns":"%s","liquidAmount":%.4f,"stakedAmount":%.4f,"totalAmount":%.4f}`,
+		common.Bytes2Hex(b.Address[:]), b.AddressEns, float64(b.LiquidAmount)/10000.0, float64(b.StakedAmount)/10000.0, float64(b.LiquidAmount+b.StakedAmount)/10000.0)), nil
 }
 
 type ENS struct {

@@ -879,35 +879,37 @@ func (cli *DBClient) InsertBlocks(blocks []*models.Block) error {
 }
 
 // InsertBalance inserts/updates the balance of an address
-func (cli *DBClient) InsertBalance(address common.Address, balance uint64, blockNumber uint64) error {
+func (cli *DBClient) InsertBalance(address common.Address, liquidBalance uint64, stakedBalance uint64, blockNumber uint64) error {
 	sql := `
-		INSERT INTO balances(address, amount, block_number) VALUES (E'\\x%s', %d, %d)
+		INSERT INTO balances(address, liquid_amount, staked_amount, block_number) VALUES (E'\\x%s', %d, %d, %d)
 		ON CONFLICT (address) DO UPDATE
-			SET amount = excluded.amount, block_number = excluded.block_number
+			SET liquid_amount = excluded.liquid_amount,
+				staked_amount = excluded.staked_amount,
+				block_number = excluded.block_number
 	`
 	adr := common.Bytes2Hex(address[:])[:]
-	//	log.Println(fmt.Sprintf(sql, adr, balance, blockNumber))
-	rows, err := cli.db.Query(fmt.Sprintf(sql, adr, balance, blockNumber))
+	//	log.Println(fmt.Sprintf(sql, adr, liquidBalance, stakedBalance, blockNumber))
+	rows, err := cli.db.Query(fmt.Sprintf(sql, adr, liquidBalance, stakedBalance, blockNumber))
 	rows.Close()
 
 	return err
 }
 
 // GetBalanceStats gets the table stats
-func (cli *DBClient) GetBalanceStats() (uint64, uint64, uint64, error) {
-	query := `select count(*), max(amount), min(amount) from balances`
-	var count, max, min uint64
-	err := cli.db.QueryRow(query).Scan(&count, &max, &min)
+func (cli *DBClient) GetBalanceStats() (uint64, uint64, uint64, uint64, uint64, error) {
+	query := `select count(*), min(liquid_amount), max(liquid_amount), min(staked_amount), max(staked_amount) from balances`
+	var count, minLiquid, maxLiquid, minStaked, maxStaked uint64
+	err := cli.db.QueryRow(query).Scan(&count, &minLiquid, &maxLiquid, &minStaked, &maxStaked)
 	if err != nil {
-		return 0, 0, 0, err
+		return 0, 0, 0, 0, 0, err
 	}
 
-	return count, max, min, nil
+	return count, minLiquid, maxLiquid, minStaked, maxStaked, nil
 }
 
 // GetTopBalances gets the rich list
 func (cli *DBClient) GetTopBalances(limit uint64, offset uint64) ([]models.Balance, error) {
-	withQuery := "SELECT address, amount, block_number FROM balances ORDER BY amount DESC LIMIT $1 OFFSET $2"
+	withQuery := "SELECT address, liquid_amount, staked_amount, block_number FROM balances ORDER BY liquid_amount + staked_amount DESC LIMIT $1 OFFSET $2"
 
 	query := strings.Join([]string{
 		"WITH b AS (", withQuery, ")",
@@ -915,8 +917,8 @@ func (cli *DBClient) GetTopBalances(limit uint64, offset uint64) ([]models.Balan
 		"   ARRAY_TO_STRING((ARRAY_AGG(DISTINCT ens.name))[:1], ', ') address_ens",
 		" FROM b",
 		"   LEFT JOIN ens ON ens.address = b.address",
-		" GROUP BY b.address, b.amount, b.block_number",
-		" ORDER BY b.amount DESC"}, "")
+		" GROUP BY b.address, b.liquid_amount, b.staked_amount, b.block_number",
+		" ORDER BY b.liquid_amount + b.staked_amount DESC"}, "")
 	rows, err := cli.db.Query(query, limit, offset)
 
 	if err != nil {
@@ -929,10 +931,11 @@ func (cli *DBClient) GetTopBalances(limit uint64, offset uint64) ([]models.Balan
 	for rows.Next() {
 		var addressBytes []byte
 		var addressEns string
-		var amount uint64
+		var liquidAmount uint64
+		var stakedAmount uint64
 		var blockNumber uint64
 
-		rows.Scan(&addressBytes, &amount, &blockNumber, &addressEns)
+		rows.Scan(&addressBytes, &liquidAmount, &stakedAmount, &blockNumber, &addressEns)
 		if err = rows.Err(); err != nil {
 			log.Println(err)
 			return nil, err
@@ -940,7 +943,7 @@ func (cli *DBClient) GetTopBalances(limit uint64, offset uint64) ([]models.Balan
 
 		address := common.BytesToAddress(addressBytes)
 
-		result = append(result, models.Balance{Address: address, AddressEns: addressEns, Amount: amount, BlockNumber: blockNumber})
+		result = append(result, models.Balance{Address: address, AddressEns: addressEns, LiquidAmount: liquidAmount, StakedAmount: stakedAmount, BlockNumber: blockNumber})
 	}
 
 	return result, nil
@@ -948,7 +951,7 @@ func (cli *DBClient) GetTopBalances(limit uint64, offset uint64) ([]models.Balan
 
 // PurgeBalanceObject purges balances less than minAmount
 func (cli *DBClient) PurgeBalanceObject(minAmount uint64) error {
-	query := `DELETE FROM balances WHERE amount < $1`
+	query := `DELETE FROM balances WHERE liquid_amount + staked_amount < $1`
 
 	cli.db.QueryRow(query, minAmount)
 
